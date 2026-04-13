@@ -1,11 +1,8 @@
 from flask import Flask, render_template, request, jsonify, session, redirect
 import os
-import smtplib
 import random
 import requests
 from datetime import datetime, timedelta, timezone
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from pymongo import MongoClient, ASCENDING
 from dotenv import load_dotenv
 import bcrypt
@@ -77,13 +74,13 @@ def is_rate_limited(ip: str, max_calls: int = 3, window_sec: int = 600) -> bool:
     _rate_store[ip].append(now)
     return False
 
-# ================= EMAIL =================
+# ================= EMAIL (Resend API — works on Render free tier) =================
 def send_email_otp(email, otp, name="User"):
-    sender   = os.getenv("EMAIL_USER")
-    password = os.getenv("EMAIL_PASS")
+    api_key   = os.getenv("RESEND_API_KEY")
+    from_addr = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
 
-    if not sender or not password:
-        print("❌ EMAIL_USER or EMAIL_PASS not set")
+    if not api_key:
+        print("❌ RESEND_API_KEY not set")
         return False
 
     html = f"""
@@ -100,19 +97,26 @@ def send_email_otp(email, otp, name="User"):
     """
 
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "🔐 Your OTP — GitaPath Arjun AI"
-        msg["From"]    = f"Arjun AI <{sender}>"
-        msg["To"]      = email
-        msg.attach(MIMEText(f"Your OTP is: {otp}", "plain"))
-        msg.attach(MIMEText(html, "html"))
-
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(sender, password)
-            server.send_message(msg)
-
-        print(f"✅ OTP sent to {email}")
-        return True
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type" : "application/json"
+            },
+            json={
+                "from"   : f"Arjun AI <{from_addr}>",
+                "to"     : [email],
+                "subject": "🔐 Your OTP — GitaPath Arjun AI",
+                "html"   : html
+            },
+            timeout=10
+        )
+        if response.status_code in (200, 201):
+            print(f"✅ OTP sent to {email}")
+            return True
+        else:
+            print(f"❌ Resend error {response.status_code}: {response.text}")
+            return False
     except Exception as e:
         print(f"❌ Email error: {e}")
         return False
@@ -120,14 +124,14 @@ def send_email_otp(email, otp, name="User"):
 # ================= OTP HELPERS (FIX 1 & 3) =================
 def otp_save(email: str, data: dict):
     data["email"]      = email
-    data["expires_at"] = datetime.utcnow() + timedelta(minutes=10)
+    data["expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=10)
     otp_collection.replace_one({"email": email}, data, upsert=True)
 
 def otp_get(email: str):
     doc = otp_collection.find_one({"email": email})
     if not doc:
         return None
-    if datetime.utcnow() > doc["expires_at"]:
+    if datetime.now(timezone.utc) > doc["expires_at"]:
         otp_collection.delete_one({"email": email})
         return None
     return doc
@@ -265,9 +269,7 @@ def forgot():
     if request.method == 'GET':
         return render_template('forgot.html')
 
-    data = request.get_json()
-    if not data:
-        return jsonify({"success": False, "message": "Invalid request"})
+    data   = request.get_json()
     action = data.get("action")
     email  = data.get("email", "").strip().lower()
 
@@ -419,8 +421,6 @@ def history():
     if 'user' not in session:
         return jsonify({"history": []})
     user_data = users_collection.find_one({"email": session['user']})
-    if not user_data:
-        return jsonify({"history": []})
     return jsonify({"history": user_data.get("chat_history", [])[-10:]})
 
 
