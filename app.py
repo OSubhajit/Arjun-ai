@@ -74,49 +74,26 @@ def is_rate_limited(ip: str, max_calls: int = 3, window_sec: int = 600) -> bool:
     _rate_store[ip].append(now)
     return False
 
-# ================= EMAIL (Mailjet API — works on Render free tier, no domain needed) =================
+# ================= EMAIL (Google Apps Script — free, no limits, uses Gmail) =================
 def send_email_otp(email, otp, name="User"):
-    api_key    = os.getenv("MAILJET_API_KEY")
-    secret_key = os.getenv("MAILJET_SECRET_KEY")
-    from_email = os.getenv("EMAIL_FROM", "subhajitsarkar0708@gmail.com")
+    script_url = os.getenv("GMAIL_SCRIPT_URL")
 
-    if not api_key or not secret_key:
-        print("❌ MAILJET_API_KEY or MAILJET_SECRET_KEY not set")
+    if not script_url:
+        print("❌ GMAIL_SCRIPT_URL not set")
         return False
-
-    html = f"""
-    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;">
-      <div style="background:linear-gradient(135deg,#ff6b35,#f7931e);padding:30px;text-align:center;">
-        <h1 style="color:white;margin:0;">🧠 GitaPath — Arjun AI</h1>
-      </div>
-      <div style="padding:30px;text-align:center;">
-        <p>Hello <strong>{name}</strong>, your OTP is:</p>
-        <div style="font-size:38px;font-weight:bold;color:#ff6b35;letter-spacing:8px;margin:20px 0;">{otp}</div>
-        <p style="color:#999;font-size:13px;">Valid for 10 minutes. Do not share this OTP.</p>
-      </div>
-    </div>
-    """
 
     try:
         response = requests.post(
-            "https://api.mailjet.com/v3.1/send",
-            auth=(api_key, secret_key),
-            json={
-                "Messages": [{
-                    "From"    : {"Email": from_email, "Name": "Arjun AI"},
-                    "To"      : [{"Email": email, "Name": name}],
-                    "Subject" : "🔐 Your OTP — GitaPath Arjun AI",
-                    "HTMLPart": html,
-                    "TextPart": f"Your OTP is: {otp}"
-                }]
-            },
-            timeout=10
+            script_url,
+            json={"to": email, "name": name, "otp": otp},
+            timeout=15
         )
-        if response.status_code == 200:
+        result = response.json()
+        if result.get("success"):
             print(f"✅ OTP sent to {email}")
             return True
         else:
-            print(f"❌ Mailjet error {response.status_code}: {response.text}")
+            print(f"❌ Script error: {result.get('error')}")
             return False
     except Exception as e:
         print(f"❌ Email error: {e}")
