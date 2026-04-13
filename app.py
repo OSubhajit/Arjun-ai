@@ -74,13 +74,14 @@ def is_rate_limited(ip: str, max_calls: int = 3, window_sec: int = 600) -> bool:
     _rate_store[ip].append(now)
     return False
 
-# ================= EMAIL (Resend API — works on Render free tier) =================
+# ================= EMAIL (Mailjet API — works on Render free tier, no domain needed) =================
 def send_email_otp(email, otp, name="User"):
-    api_key   = os.getenv("RESEND_API_KEY")
-    from_addr = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
+    api_key    = os.getenv("MAILJET_API_KEY")
+    secret_key = os.getenv("MAILJET_SECRET_KEY")
+    from_email = os.getenv("EMAIL_FROM", "subhajitsarkar0708@gmail.com")
 
-    if not api_key:
-        print("❌ RESEND_API_KEY not set")
+    if not api_key or not secret_key:
+        print("❌ MAILJET_API_KEY or MAILJET_SECRET_KEY not set")
         return False
 
     html = f"""
@@ -98,24 +99,24 @@ def send_email_otp(email, otp, name="User"):
 
     try:
         response = requests.post(
-            "https://api.resend.com/emails",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type" : "application/json"
-            },
+            "https://api.mailjet.com/v3.1/send",
+            auth=(api_key, secret_key),
             json={
-                "from"   : f"Arjun AI <{from_addr}>",
-                "to"     : [email],
-                "subject": "🔐 Your OTP — GitaPath Arjun AI",
-                "html"   : html
+                "Messages": [{
+                    "From"    : {"Email": from_email, "Name": "Arjun AI"},
+                    "To"      : [{"Email": email, "Name": name}],
+                    "Subject" : "🔐 Your OTP — GitaPath Arjun AI",
+                    "HTMLPart": html,
+                    "TextPart": f"Your OTP is: {otp}"
+                }]
             },
             timeout=10
         )
-        if response.status_code in (200, 201):
+        if response.status_code == 200:
             print(f"✅ OTP sent to {email}")
             return True
         else:
-            print(f"❌ Resend error {response.status_code}: {response.text}")
+            print(f"❌ Mailjet error {response.status_code}: {response.text}")
             return False
     except Exception as e:
         print(f"❌ Email error: {e}")
@@ -124,14 +125,14 @@ def send_email_otp(email, otp, name="User"):
 # ================= OTP HELPERS (FIX 1 & 3) =================
 def otp_save(email: str, data: dict):
     data["email"]      = email
-    data["expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=10)
+    data["expires_at"] = datetime.utcnow() + timedelta(minutes=10)
     otp_collection.replace_one({"email": email}, data, upsert=True)
 
 def otp_get(email: str):
     doc = otp_collection.find_one({"email": email})
     if not doc:
         return None
-    if datetime.now(timezone.utc) > doc["expires_at"]:
+    if datetime.utcnow() > doc["expires_at"]:
         otp_collection.delete_one({"email": email})
         return None
     return doc
@@ -270,6 +271,8 @@ def forgot():
         return render_template('forgot.html')
 
     data   = request.get_json()
+    if not data:
+        return jsonify({"success": False, "message": "Invalid request"})
     action = data.get("action")
     email  = data.get("email", "").strip().lower()
 
@@ -319,7 +322,9 @@ def api_chat():
     if 'user' not in session:
         return jsonify({'reply': 'Session expired. Please log in again.'})
 
-    data         = request.get_json()
+    data = request.get_json()
+    if not data:
+        return jsonify({'reply': 'Invalid request'})
     user_message = data.get("message", "").strip()
     if not user_message:
         return jsonify({'reply': 'Empty message'})
@@ -421,6 +426,8 @@ def history():
     if 'user' not in session:
         return jsonify({"history": []})
     user_data = users_collection.find_one({"email": session['user']})
+    if not user_data:
+        return jsonify({"history": []})
     return jsonify({"history": user_data.get("chat_history", [])[-10:]})
 
 
