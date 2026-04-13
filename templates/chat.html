@@ -1,181 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="google-adsense-account" content="ca-pub-7813661458323342">
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="google-adsense-account" content="ca-pub-7813661458323342">
   <title>GitaPath — Speak with Arjun</title>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0806; --sidebar-bg: #0e0c09; --panel: #110f0a;
-      --border: #2e2616; --accent: #c8a96e; --accent-dim: rgba(200,169,110,0.12);
-      --text: #e8e0cc; --muted: #7a6f58; --input-bg: #17130b;
-      --user-bubble: #1e190f; --arjun-bubble: #130e0a;
-      --radius: 14px; --saffron: #ff9933; --sidebar-w: 280px;
-    }
-    body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); height: 100vh; display: flex; overflow: hidden; }
-
-
-    @media (max-width: 768px) {
-  body {
-    overflow: auto;
-  }
-}
-
-    /* ── SIDEBAR ── */
-    .sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 10; }
-    .sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
-    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .logo-mark { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #c8a96e, #8b6914); display: grid; place-items: center; font-size: 20px; flex-shrink: 0; }
-    .brand-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--text); }
-    .brand-name span { color: var(--accent); }
-    .new-chat-btn { width: 100%; padding: 10px 14px; background: var(--accent-dim); border: 1px solid rgba(200,169,110,0.25); border-radius: 10px; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-    .new-chat-btn:hover { background: rgba(200,169,110,0.2); }
-
-    /* ── ARJUN CARD ── */
-    .arjun-card { margin: 16px; padding: 16px; background: linear-gradient(135deg, rgba(200,169,110,0.08), rgba(139,105,20,0.05)); border: 1px solid rgba(200,169,110,0.15); border-radius: 14px; }
-    .arjun-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #2a1f08, #1a1205); border: 2px solid rgba(200,169,110,0.4); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 10px; box-shadow: 0 0 20px rgba(200,169,110,0.2); position: relative; }
-    .arjun-avatar::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid rgba(200,169,110,0.2); animation: pulse 3s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
-    .arjun-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; color: var(--accent); text-align: center; }
-    .arjun-title { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 3px; letter-spacing: 0.05em; }
-    .arjun-status { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 8px; font-size: 0.73rem; color: #7ab88a; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #7ab88a; animation: blink 2s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-    /* MOBILE FIX */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: -100%;
-    top: 0;
-    height: 100%;
-    width: 240px;
-    transition: 0.3s;
-  }
-
-  .sidebar.active {
-    left: 0;
-  }
-
-  body {
-    overflow: auto;
-  }
-}
-    
-    /* ── SIDEBAR STORY ── */
-    .story-section { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
-    .story-section::-webkit-scrollbar { width: 4px; }
-    .story-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .section-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 0 8px; }
-    .story-text { font-size: 0.77rem; color: var(--muted); line-height: 1.7; }
-
-    /* ── SIDEBAR FOOTER ── */
-    .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .user-info { display: flex; align-items: center; gap: 10px; }
-    .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #c8a96e, #8b6914); display: grid; place-items: center; font-size: 16px; font-weight: 600; color: #0a0806; }
-    .user-name { font-size: 0.85rem; font-weight: 500; }
-    .logout-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s; }
-    .logout-btn:hover { color: var(--text); background: var(--border); }
-    .logout-btn svg { width: 16px; height: 16px; }
-
-    /* ── MAIN ── */
-  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; }
-    .main::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 50% 40% at 70% 20%, rgba(200,169,110,0.04) 0%, transparent 70%), radial-gradient(ellipse 40% 50% at 20% 80%, rgba(255,100,20,0.03) 0%, transparent 70%); pointer-events: none; }
-
-    /* ── CHAT HEADER ── */
-    .chat-header { padding: 18px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
-    .chat-header-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2a1f08, #1a1205); border: 2px solid rgba(200,169,110,0.35); display: flex; align-items: center; justify-content: center; font-size: 22px; }
-    .chat-header-info { flex: 1; }
-    .chat-header-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; color: var(--accent); }
-    .chat-header-sub { font-size: 0.76rem; color: var(--muted); }
-    .header-actions { display: flex; align-items: center; gap: 8px; }
-    .voice-toggle { background: var(--accent-dim); border: 1px solid rgba(200,169,110,0.25); color: var(--accent); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
-    .voice-toggle.muted { background: rgba(224,112,112,0.1); border-color: rgba(224,112,112,0.3); color: #e07070; }
-    .help-link { font-size: 0.75rem; color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s; }
-    .help-link:hover { color: var(--accent); border-color: rgba(200,169,110,0.3); }
-
-    /* ── MESSAGES ── */
-    .messages-wrap { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
-    .messages-wrap::-webkit-scrollbar { width: 5px; }
-    .messages-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* ── INTRO ── */
-    .intro-msg { max-width: 680px; margin: 0 auto; text-align: center; animation: fadeUp 0.8s ease both; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    .intro-lotus { font-size: 52px; margin-bottom: 14px; filter: drop-shadow(0 0 24px rgba(200,169,110,0.5)); }
-    .intro-msg h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--accent); margin-bottom: 10px; }
-    .intro-msg p { font-size: 0.9rem; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
-    .intro-sanskrit { font-family: 'Noto Serif Devanagari', serif; font-size: 0.95rem; color: rgba(200,169,110,0.6); margin: 16px 0; padding: 12px 20px; border: 1px solid rgba(200,169,110,0.15); border-radius: 10px; background: rgba(200,169,110,0.04); display: inline-block; }
-    .intro-translation { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-bottom: 24px; }
-    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-    .suggestion-chip { padding: 8px 14px; background: var(--arjun-bubble); border: 1px solid var(--border); border-radius: 20px; font-size: 0.82rem; color: var(--muted); cursor: pointer; transition: all 0.2s; }
-    .suggestion-chip:hover { background: var(--accent-dim); border-color: rgba(200,169,110,0.3); color: var(--accent); }
-
-    /* ── MESSAGE BUBBLES ── */
-    .message { display: flex; gap: 12px; animation: fadeUp 0.4s ease both; max-width: 780px; width: 100%; }
-    
-    @media (max-width: 768px) {
-  .message {
-    max-width: 100%;
-  }
-}
-    .message.user { flex-direction: row-reverse; margin-left: auto; }
-    .msg-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .msg-avatar.arjun { background: linear-gradient(135deg, #2a1f08, #1a1205); border: 1px solid rgba(200,169,110,0.3); }
-    .msg-avatar.user { background: linear-gradient(135deg, #c8a96e, #8b6914); font-size: 14px; font-weight: 600; color: #0a0806; }
-    .msg-content { flex: 1; }
-    .msg-bubble { padding: 14px 18px; border-radius: 16px; font-size: 0.9rem; line-height: 1.8; }
-    .message.arjun .msg-bubble { background: var(--arjun-bubble); border: 1px solid var(--border); border-top-left-radius: 4px; }
-    .message.user .msg-bubble { background: var(--user-bubble); border: 1px solid rgba(200,169,110,0.15); border-top-right-radius: 4px; text-align: right; }
-    .shloka-box { background: rgba(200,169,110,0.06); border: 1px solid rgba(200,169,110,0.2); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'Noto Serif Devanagari', serif; font-size: 0.85rem; color: rgba(200,169,110,0.85); line-height: 1.8; }
-    .msg-time { font-size: 0.7rem; color: var(--muted); margin-top: 5px; padding: 0 2px; }
-    .message.user .msg-time { text-align: right; }
-
-    /* ── TYPING ── */
-    .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 14px 18px; background: var(--arjun-bubble); border: 1px solid var(--border); border-radius: 16px; border-top-left-radius: 4px; width: fit-content; }
-    .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: 0.4; animation: typingBounce 1.2s infinite; }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typingBounce { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-5px); } }
-
-    /* ── INPUT ── */
-    .input-area { padding: 16px 28px 20px; border-top: 1px solid var(--border); position: relative; z-index: 1; }
-    .input-row { display: flex; gap: 10px; align-items: flex-end; background: var(--input-bg); border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px 10px 18px; transition: border-color 0.2s, box-shadow 0.2s; }
-    .input-row:focus-within { border-color: rgba(200,169,110,0.4); box-shadow: 0 0 0 3px rgba(200,169,110,0.08); }
-    textarea { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; resize: none; max-height: 140px; line-height: 1.6; padding: 4px 0; }
-    textarea::placeholder { color: #3a3020; }
-    .voice-btn { background: var(--accent-dim); border: 1px solid rgba(200,169,110,0.25); color: var(--accent); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 16px; transition: all 0.2s; flex-shrink: 0; }
-    .voice-btn:hover { background: rgba(200,169,110,0.2); }
-    .voice-btn.listening { background: rgba(255,80,80,0.15); border-color: rgba(255,80,80,0.4); animation: pulse-red 1s infinite; }
-    @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,80,80,0.3); } 50% { box-shadow: 0 0 0 6px rgba(255,80,80,0); } }
-    .send-btn { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #c8a96e, #8b6914); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.2s, transform 0.15s; }
-    .send-btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.05); }
-    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .send-btn svg { width: 18px; height: 18px; fill: #0a0806; }
-    .input-hint { font-size: 0.72rem; color: var(--muted); margin-top: 8px; text-align: center; }
-
-    /* ── MOBILE ── */
-    .menu-btn { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 6px; }
-    @media (max-width: 768px) {
-      .sidebar { position: fixed; left: -100%; top: 0; bottom: 0; z-index: 100; transition: left 0.3s; width: 280px; }
-
-      .main {
-  width: 100%;
-}
-      
-      .sidebar.open { left: 0; }
-      .menu-btn { display: flex; align-items: center; }
-      .messages-wrap { padding: 16px; }
-      .input-area { padding: 12px 16px 16px; }
-      .chat-header { padding: 14px 16px; }
-      .help-link { display: none; }
-    }
+    /* Chat page needs full-height flex layout */
+    body { height: 100vh; display: flex; overflow: hidden; }
+    @media (max-width: 768px) { body { overflow: auto; } }
   </style>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342"
-     crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -194,6 +31,7 @@
       </button>
     </div>
 
+    <!-- Arjun Card -->
     <div class="arjun-card">
       <div class="arjun-avatar">🏹</div>
       <div class="arjun-name">Arjun</div>
@@ -201,16 +39,26 @@
       <div class="arjun-status"><div class="status-dot"></div>Awaiting your question</div>
     </div>
 
+    <!-- Mahabharata Story -->
     <div class="story-section">
       <div class="section-label">📜 The Mahabharata</div>
       <div class="story-text" id="sidebar-story"></div>
     </div>
 
+    <!-- Conversation History -->
+    <div class="conv-section" id="conv-section">
+      <div class="section-label">🗂 Conversation History</div>
+      <div id="conv-list">
+        <div class="conv-empty">Your conversations will appear here</div>
+      </div>
+    </div>
+
+    <!-- Footer: username → profile, logout -->
     <div class="sidebar-footer">
-      <div class="user-info">
+      <a href="/profile" class="user-info" title="View profile">
         <div class="user-avatar" id="user-initial">S</div>
         <div class="user-name" id="user-display-name">{{ user_name }}</div>
-      </div>
+      </a>
       <a href="/logout" class="logout-btn" title="Sign out">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -290,262 +138,242 @@
     </div>
   </main>
 
-  <script>
-    const userName = "{{ user_name }}";
-    const mahabharataStory = `{{ story | replace('\n', '\\n') | replace('"', '\\"') }}`;
-    let isTyping = false;
-    let voiceEnabled = true;
+<script>
+  const userName         = "{{ user_name }}";
+  const mahabharataStory = `{{ story | replace('\n', '\\n') | replace('"', '\\"') }}`;
+  let isTyping           = false;
+  let voiceEnabled       = true;
+  let allHistory         = [];
 
-    // ── INIT ──
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('user-initial').textContent = userName.charAt(0).toUpperCase();
-      document.getElementById('sidebar-story').textContent = mahabharataStory.substring(0, 600) + '…';
-      loadHistory();
-      // Preload voices
-      if (window.speechSynthesis) {
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-        window.speechSynthesis.getVoices();
-      }
-    });
+  // ── INIT ──
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('user-initial').textContent    = userName.charAt(0).toUpperCase();
+    document.getElementById('sidebar-story').textContent   = mahabharataStory.substring(0, 500) + '…';
+    loadHistory();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      window.speechSynthesis.getVoices();
+    }
+  });
 
-    // ── SIDEBAR ──
-   function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('open');
-}
-
-document.addEventListener('click', function(e) {
-  const sidebar = document.getElementById('sidebar');
-  const menuBtn = document.querySelector('.menu-btn');
-
-  if (window.innerWidth <= 768) {
-    if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
+  // ── SIDEBAR TOGGLE ──
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.querySelector('.menu-btn');
+    if (window.innerWidth <= 768 && !sidebar.contains(e.target) && menuBtn && !menuBtn.contains(e.target)) {
       sidebar.classList.remove('open');
     }
+  });
+
+  // ── VOICE TOGGLE ──
+  function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    const btn = document.getElementById('voiceToggle');
+    btn.textContent = voiceEnabled ? '🔊 Voice' : '🔇 Muted';
+    btn.classList.toggle('muted', !voiceEnabled);
+    if (!voiceEnabled) window.speechSynthesis.cancel();
   }
-});
 
-    // ── VOICE TOGGLE ──
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      const btn = document.getElementById('voiceToggle');
-      btn.textContent = voiceEnabled ? '🔊 Voice' : '🔇 Muted';
-      btn.classList.toggle('muted', !voiceEnabled);
-      if (!voiceEnabled) window.speechSynthesis.cancel();
-    }
+  // ── NEW CHAT ──
+  function newChat() {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    document.getElementById('messages').innerHTML = `
+      <div class="intro-msg" id="intro-section">
+        <div class="intro-lotus">🏹</div>
+        <h2>Namaste, ${userName}</h2>
+        <p>I am here. Tell me what weighs on your heart today.</p>
+        <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
+        <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>
+      </div>`;
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+  }
 
-    // ── NEW CHAT ──
-    function newChat() {
-      window.speechSynthesis && window.speechSynthesis.cancel();
-      const wrap = document.getElementById('messages');
-      wrap.innerHTML = `
-        <div class="intro-msg" id="intro-section">
-          <div class="intro-lotus">🏹</div>
-          <h2>Namaste, ${userName}</h2>
-          <p>I am here. Tell me what weighs on your heart today.</p>
-          <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
-          <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>
-        </div>`;
-      if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('open');
-      }
-    }
-
-    // ── LOAD HISTORY ──
-    async function loadHistory() {
-      try {
-        const res = await fetch('/api/history');
-        const data = await res.json();
-        if (data.history && data.history.length > 0) {
+  // ── LOAD HISTORY ──
+  async function loadHistory() {
+    try {
+      const res  = await fetch('/api/conversations');
+      const data = await res.json();
+      allHistory = data.conversations || [];
+      renderConvList();
+      // Load last session messages in chat
+      if (allHistory.length > 0) {
+        const last = allHistory[allHistory.length - 1];
+        if (last.messages && last.messages.length > 0) {
           const intro = document.getElementById('intro-section');
           if (intro) intro.style.display = 'none';
-          data.history.forEach(chat => {
-            addMessage('user', chat.user);
-            addMessage('arjun', chat.arjun);
-          });
+          last.messages.forEach(m => { addMessage('user', m.user); addMessage('arjun', m.arjun); });
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
+  }
 
-    // ── SEND SUGGESTION ──
-    function sendSuggestion(text) {
-      document.getElementById('user-input').value = text;
+  // ── RENDER CONV LIST ──
+  function renderConvList() {
+    const list = document.getElementById('conv-list');
+    if (!allHistory || allHistory.length === 0) {
+      list.innerHTML = '<div class="conv-empty">No conversations yet</div>';
+      return;
+    }
+    list.innerHTML = '';
+    // Show in reverse (newest first)
+    [...allHistory].reverse().forEach((conv, i) => {
+      const item = document.createElement('div');
+      item.className = 'conv-item';
+      if (i === 0) item.classList.add('active');
+      item.innerHTML = `
+        <div class="conv-dot">💬</div>
+        <div class="conv-meta">
+          <div class="conv-date">${conv.date}</div>
+          <div class="conv-preview">${conv.messages[0]?.user?.substring(0, 40) || 'Conversation'}…</div>
+        </div>
+        <div class="conv-count">${conv.messages.length}</div>`;
+      item.onclick = () => loadConversation(conv, item);
+      list.appendChild(item);
+    });
+  }
+
+  // ── LOAD A SPECIFIC CONVERSATION ──
+  function loadConversation(conv, clickedEl) {
+    // Mark active
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    clickedEl.classList.add('active');
+    // Render messages
+    const wrap = document.getElementById('messages');
+    wrap.innerHTML = '';
+    conv.messages.forEach(m => { addMessage('user', m.user); addMessage('arjun', m.arjun); });
+    scrollBottom();
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+  }
+
+  // ── SEND SUGGESTION ──
+  function sendSuggestion(text) {
+    document.getElementById('user-input').value = text;
+    sendMessage();
+  }
+
+  // ── HANDLE KEY ──
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  // ── AUTO RESIZE ──
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  }
+
+  // ── VOICE INPUT ──
+  function startVoice() {
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      alert("Voice input not supported in this browser. Try Chrome.");
+      return;
+    }
+    const btn = document.getElementById('voiceBtn');
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.onstart  = () => btn.classList.add('listening');
+    recognition.onend    = () => btn.classList.remove('listening');
+    recognition.onresult = (e) => {
+      const text = e.results[0][0].transcript;
+      document.getElementById("user-input").value = text;
+      autoResize(document.getElementById("user-input"));
       sendMessage();
+    };
+    recognition.onerror = (e) => {
+      btn.classList.remove('listening');
+      if (e.error !== 'no-speech') alert("Voice recognition failed. Please try again.");
+    };
+    recognition.start();
+  }
+
+  // ── VOICE OUTPUT ──
+  function speak(text) {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[\u0900-\u097F]+/g, '').replace(/\s+/g, ' ').trim();
+    const speech = new SpeechSynthesisUtterance(cleanText);
+    speech.lang = "en-IN"; speech.rate = 0.82; speech.pitch = 0.35; speech.volume = 1;
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = ["Google UK English Male","Microsoft David","Microsoft Mark"];
+    let selected = null;
+    for (const name of preferred) { selected = voices.find(v => v.name.includes(name)); if (selected) break; }
+    if (!selected) selected = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('male'));
+    if (selected) speech.voice = selected;
+    window.speechSynthesis.speak(speech);
+  }
+
+  // ── SEND MESSAGE ──
+  async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const msg = input.value.trim();
+    if (!msg || isTyping) return;
+    const intro = document.getElementById('intro-section');
+    if (intro) intro.style.display = 'none';
+    addMessage('user', msg);
+    input.value = ''; input.style.height = 'auto';
+    isTyping = true;
+    document.getElementById('send-btn').disabled = true;
+    const typingEl = addTyping();
+    try {
+      const res  = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: msg }) });
+      const data = await res.json();
+      typingEl.remove();
+      const reply = data.reply || "Something went wrong.";
+      addMessage('arjun', reply);
+      speak(reply);
+    } catch (e) {
+      typingEl.remove();
+      addMessage('arjun', 'The connection to Kurukshetra was lost. Please try again 🙏');
     }
+    isTyping = false;
+    document.getElementById('send-btn').disabled = false;
+    scrollBottom();
+  }
 
-    // ── HANDLE KEY ──
-    function handleKey(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
-      }
-    }
+  // ── ADD MESSAGE ──
+  function addMessage(role, text) {
+    const wrap = document.getElementById('messages');
+    const div  = document.createElement('div');
+    div.className = `message ${role}`;
+    const isArjun = role === 'arjun';
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    let formattedText = text;
+    if (isArjun) formattedText = text.replace(/([\u0900-\u097F][^\n]*)/g, '<div class="shloka-box">$1</div>');
+    div.innerHTML = `
+      <div class="msg-avatar ${role}">${isArjun ? '🏹' : userName.charAt(0).toUpperCase()}</div>
+      <div class="msg-content">
+        <div class="msg-bubble">${formattedText}</div>
+        <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${time}</div>
+      </div>`;
+    wrap.appendChild(div);
+    scrollBottom();
+  }
 
-    // ── AUTO RESIZE ──
-    function autoResize(el) {
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 140) + 'px';
-    }
+  // ── TYPING INDICATOR ──
+  function addTyping() {
+    const wrap = document.getElementById('messages');
+    const div  = document.createElement('div');
+    div.className = 'message arjun';
+    div.innerHTML = `
+      <div class="msg-avatar arjun">🏹</div>
+      <div class="msg-content">
+        <div class="typing-indicator">
+          <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+        </div>
+      </div>`;
+    wrap.appendChild(div);
+    scrollBottom();
+    return div;
+  }
 
-    // ── VOICE INPUT ──
-    function startVoice() {
-      if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-        alert("Voice input not supported in this browser. Try Chrome.");
-        return;
-      }
-      const btn = document.getElementById('voiceBtn');
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = "en-IN";
-      recognition.interimResults = false;
-
-      recognition.onstart = () => btn.classList.add('listening');
-      recognition.onend = () => btn.classList.remove('listening');
-
-      recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript;
-        document.getElementById("user-input").value = text;
-        autoResize(document.getElementById("user-input"));
-        sendMessage();
-      };
-      recognition.onerror = function(e) {
-        btn.classList.remove('listening');
-        if (e.error !== 'no-speech') alert("Voice recognition failed. Please try again.");
-      };
-      recognition.start();
-    }
-
-    // ── VOICE OUTPUT ──
-    function speak(text) {
-      if (!voiceEnabled || !window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
-
-      // Strip Sanskrit shlokas from speech (speak only English parts)
-      const cleanText = text
-        .replace(/[\u0900-\u097F]+/g, '') // remove Devanagari
-        .replace(/\s+/g, ' ')
-        .trim();
-
-      const speech = new SpeechSynthesisUtterance(cleanText);
-      speech.lang = "en-IN";
-      speech.rate = 0.82;
-      speech.pitch = 0.35;
-      speech.volume = 1;
-
-      const voices = window.speechSynthesis.getVoices();
-      const preferredNames = [
-        "Google UK English Male",
-        "Microsoft David",
-        "Microsoft Mark",
-        "Google हिन्दी"
-      ];
-
-      let selected = null;
-      for (const name of preferredNames) {
-        selected = voices.find(v => v.name.includes(name));
-        if (selected) break;
-      }
-      // Fallback: any male English voice
-      if (!selected) {
-        selected = voices.find(v =>
-          (v.lang.startsWith('en')) && v.name.toLowerCase().includes('male')
-        );
-      }
-      if (selected) speech.voice = selected;
-
-      window.speechSynthesis.speak(speech);
-    }
-
-    // ── SEND MESSAGE ──
-    async function sendMessage() {
-      const input = document.getElementById('user-input');
-      const msg = input.value.trim();
-      if (!msg || isTyping) return;
-
-      const intro = document.getElementById('intro-section');
-      if (intro) intro.style.display = 'none';
-
-      addMessage('user', msg);
-      input.value = '';
-      input.style.height = 'auto';
-
-      isTyping = true;
-      document.getElementById('send-btn').disabled = true;
-
-      const typingEl = addTyping();
-
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: msg })
-        });
-        const data = await res.json();
-        typingEl.remove();
-        const reply = data.reply || "Something went wrong.";
-        addMessage('arjun', reply);
-        speak(reply);
-      } catch (e) {
-        typingEl.remove();
-        addMessage('arjun', 'The connection to Kurukshetra was lost. Please try again 🙏');
-      }
-
-      isTyping = false;
-      document.getElementById('send-btn').disabled = false;
-      scrollBottom();
-    }
-
-    // ── ADD MESSAGE ──
-    function addMessage(role, text) {
-      const wrap = document.getElementById('messages');
-      const div = document.createElement('div');
-      div.className = `message ${role}`;
-      const isArjun = role === 'arjun';
-      const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-      // Format Arjun's messages — highlight Sanskrit shlokas
-      let formattedText = text;
-      if (isArjun) {
-        // Wrap Devanagari text in shloka box
-        formattedText = text.replace(
-          /([\u0900-\u097F][^\n]*)/g,
-          '<div class="shloka-box">$1</div>'
-        );
-      }
-
-      div.innerHTML = `
-        <div class="msg-avatar ${role}">${isArjun ? '🏹' : userName.charAt(0).toUpperCase()}</div>
-        <div class="msg-content">
-          <div class="msg-bubble">${formattedText}</div>
-          <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${time}</div>
-        </div>`;
-      wrap.appendChild(div);
-      scrollBottom();
-    }
-
-    // ── TYPING INDICATOR ──
-    function addTyping() {
-      const wrap = document.getElementById('messages');
-      const div = document.createElement('div');
-      div.className = 'message arjun';
-      div.innerHTML = `
-        <div class="msg-avatar arjun">🏹</div>
-        <div class="msg-content">
-          <div class="typing-indicator">
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-          </div>
-        </div>`;
-      wrap.appendChild(div);
-      scrollBottom();
-      return div;
-    }
-
-    // ── SCROLL ──
-    function scrollBottom() {
-      const wrap = document.getElementById('messages');
-      wrap.scrollTop = wrap.scrollHeight;
-    }
-  </script>
+  function scrollBottom() {
+    const wrap = document.getElementById('messages');
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+</script>
 </body>
 </html>

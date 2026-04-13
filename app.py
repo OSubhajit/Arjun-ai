@@ -398,8 +398,61 @@ Now you are here to pass that same transformation to every person who comes to y
     return jsonify({'reply': reply})
 
 
-@app.route('/api/history')
-def history():
+@app.route('/profile')
+def profile():
+    if 'user' not in session:
+        return redirect('/')
+    return render_template('profile.html')
+
+
+@app.route('/api/profile')
+def api_profile():
+    if 'user' not in session:
+        return jsonify({"error": "Not logged in"}), 401
+    user_data = users_collection.find_one({"email": session['user']})
+    if not user_data:
+        return jsonify({"error": "User not found"}), 404
+
+    history      = user_data.get("chat_history", [])
+    conversations = _group_by_date(history)
+
+    return jsonify({
+        "name"           : user_data.get("name", ""),
+        "email"          : user_data.get("email", ""),
+        "total_messages" : len(history),
+        "total_sessions" : len(conversations),
+        "conversations"  : conversations
+    })
+
+
+@app.route('/api/conversations')
+def api_conversations():
+    if 'user' not in session:
+        return jsonify({"conversations": []})
+    user_data = users_collection.find_one({"email": session['user']})
+    if not user_data:
+        return jsonify({"conversations": []})
+    history = user_data.get("chat_history", [])
+    return jsonify({"conversations": _group_by_date(history)})
+
+
+def _group_by_date(history):
+    """Group flat chat_history list into date-keyed conversation sessions."""
+    from collections import OrderedDict
+    groups = OrderedDict()
+    for entry in history:
+        try:
+            ts   = entry.get("timestamp", "")
+            date = ts[:10] if ts else "Unknown"
+        except Exception:
+            date = "Unknown"
+        if date not in groups:
+            groups[date] = []
+        groups[date].append({"user": entry.get("user",""), "arjun": entry.get("arjun","")})
+    return [{"date": d, "messages": msgs} for d, msgs in groups.items()]
+
+
+
     if 'user' not in session:
         return jsonify({"history": []})
     user_data = users_collection.find_one({"email": session['user']})
