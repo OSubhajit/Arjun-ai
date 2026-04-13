@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — GitaPath</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* ✅ YOUR FULL CSS — UNCHANGED */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0806;
+      font-family: 'DM Sans', sans-serif;
+      color: #e8e0cc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: #110f0a;
+      border: 1px solid #2e2616;
+      border-radius: 20px;
+      padding: 44px 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+      animation: fadeUp 0.6s ease;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .logo { text-align: center; font-size: 36px; margin-bottom: 8px; }
+    h2 {
+      font-family: 'Playfair Display', serif;
+      color: #c8a96e;
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #7a6f58;
+      font-size: 0.82rem;
+      margin-bottom: 28px;
+    }
+    .field { margin-bottom: 14px; }
+    label {
+      display: block;
+      font-size: 0.75rem;
+      color: #7a6f58;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      background: #17130b;
+      border: 1px solid #2e2616;
+      border-radius: 10px;
+      color: #e8e0cc;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #c8a96e, #8b6914);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #0a0806;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .btn-outline {
+      width: 100%;
+      padding: 11px;
+      background: transparent;
+      border: 1px solid rgba(200,169,110,0.3);
+      border-radius: 10px;
+      cursor: pointer;
+      color: #c8a96e;
+      margin-top: 8px;
+    }
+    .otp-section { display: none; }
+    .otp-section.visible { display: block; }
+    .msg { text-align: center; margin-top: 12px; }
+    .msg.success { color: #7ab88a; }
+    .msg.error { color: #e07070; }
+  </style>
+</head>
+
+<body>
+<div class="card">
+
+  <div class="logo">🪷</div>
+  <h2>Create Account</h2>
+  <p class="subtitle">Begin your journey with Arjun</p>
+
+  <!-- STEP 1 -->
+  <div id="step1-section">
+    <div class="field">
+      <label>Your Name</label>
+      <input id="name" type="text">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input id="email" type="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="password" type="password">
+    </div>
+
+    <button class="btn" id="sendOtpBtn" onclick="sendOTP()">
+      Send OTP to Email ✦
+    </button>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="otp-section" id="step2-section">
+    <div class="otp-info">
+      OTP sent to <strong id="email-display"></strong>
+    </div>
+
+    <!-- ✅ FIX: number → text -->
+    <input id="otp" type="text" maxlength="6">
+
+    <button class="btn" id="verifyBtn" onclick="verifyOTP()">
+      Verify & Create Account ✦
+    </button>
+
+    <button class="btn-outline" onclick="goBack()">← Change Details</button>
+
+    <button onclick="resendOTP()">Resend</button>
+  </div>
+
+  <div id="msg" class="msg"></div>
+
+</div>
+
+<script>
+
+let userEmail = '';
+
+function showMsg(text, type) {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = 'msg ' + type;
+}
+
+function clearMsg() {
+  document.getElementById('msg').textContent = '';
+}
+
+function goBack() {
+  document.getElementById('step1-section').style.display = 'block';
+  document.getElementById('step2-section').classList.remove('visible');
+}
+
+function switchTab(tab) {
+  if (tab === 'register') window.location.href = '/register';
+  else window.location.href = '/login';
+}
+
+
+// ================= SEND OTP =================
+async function sendOTP() {
+
+  clearMsg();
+
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  const btn = document.getElementById('sendOtpBtn');
+  btn.disabled = true;
+
+  try {
+
+    const res = await fetch('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "send_otp", name, email, password })
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Invalid response");
+    }
+
+    if (data.success) {
+
+      userEmail = email;
+
+      document.getElementById('step1-section').style.display = 'none';
+      document.getElementById('step2-section').classList.add('visible');
+      document.getElementById('email-display').textContent = email;
+
+      showMsg('OTP sent!', 'success');
+
+    } else {
+      showMsg(data.message || 'Failed', 'error');
+    }
+
+  } catch (e) {
+    showMsg('Connection failed', 'error');
+  }
+
+  btn.disabled = false;
+}
+
+
+// ================= VERIFY =================
+async function verifyOTP() {
+
+  clearMsg();
+
+  const otp = document.getElementById('otp').value.trim();
+  const email = document.getElementById('email').value.trim();
+
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+
+  try {
+
+    const res = await fetch('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "verify_otp", email, otp })
+    });
+
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Invalid response");
+    }
+
+    if (data.success) {
+      showMsg('Account created!', 'success');
+      setTimeout(() => location.href = '/chat', 1000);
+    } else {
+      showMsg(data.message || 'Invalid OTP', 'error');
+    }
+
+  } catch {
+    showMsg('Connection failed', 'error');
+  }
+
+  btn.disabled = false;
+}
+
+
+// ================= RESEND =================
+async function resendOTP() {
+
+  const name = document.getElementById('name').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  try {
+    const res = await fetch('/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: "send_otp", name, email, password })
+    });
+
+    const data = await res.json();
+
+    if (data.success) showMsg('OTP resent!', 'success');
+    else showMsg('Failed', 'error');
+
+  } catch {
+    showMsg('Connection failed', 'error');
+  }
+}
+
+</script>
+
+</body>
+</html>
