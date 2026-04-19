@@ -252,7 +252,7 @@
     if (!valid) return;
     setLoading('loginBtn', true);
     try {
-      const res  = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password }) });
+      const res  = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password, rememberMe: document.getElementById('rememberMe').checked }) });
       const data = await res.json();
       if (data.success) { showAlert('success', 'Welcome back! Entering the path...'); setTimeout(() => window.location.href = data.redirect, 1000); }
       else { showAlert('error', data.message || 'Invalid credentials'); }

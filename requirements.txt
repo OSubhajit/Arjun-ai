@@ -3,5 +3,5 @@ pymongo==4.16.0
 requests==2.32.3
 python-dotenv==1.1.0
 bcrypt==4.0.1
-dnspython
-gunicorn
+dnspython==2.7.0
+gunicorn==23.0.0
