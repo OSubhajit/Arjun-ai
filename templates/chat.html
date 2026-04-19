@@ -8,10 +8,34 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/static/style.css"/>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
-  <style>
-    body { height: 100vh; display: flex; overflow: hidden; }
-    @media (max-width: 768px) { body { overflow: auto; } }
-  </style>
+ <style>
+  body { height: 100vh; display: flex; overflow: hidden; }
+  @media (max-width: 768px) { body { overflow: auto; } }
+
+  /* Delete button on conv-item */
+  .conv-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+  }
+  .conv-item:hover .conv-delete-btn {
+    color: #888;
+  }
+  .conv-delete-btn:hover {
+    background: rgba(220, 60, 60, 0.15) !important;
+    color: #e05555 !important;
+  }
+</style>
 </head>
 <body>
 
@@ -134,18 +158,16 @@
   </main>
 
 <script>
-  // FIX 15 — use tojson filter instead of manual string escaping in a template literal.
-  // tojson produces a proper JSON string (with quotes), safe against backticks, newlines, etc.
   const userName         = {{ user_name | tojson }};
   const mahabharataStory = {{ story | tojson }};
 
   let isTyping     = false;
   let voiceEnabled = true;
   let allHistory   = [];
+  let activeDateEl = null;   // tracks which conv-item is highlighted
 
-  // ── FIX 03 — XSS prevention: escape all user-controlled text before inserting into DOM ──
+  // ── XSS PREVENTION ──
   function escapeHtml(text) {
-    // Creates a text node, reads back as HTML — browser handles all entity encoding
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
@@ -153,8 +175,8 @@
 
   // ── INIT ──
   document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('user-initial').textContent    = userName.charAt(0).toUpperCase();
-    document.getElementById('sidebar-story').textContent   = mahabharataStory.substring(0, 500) + '…';
+    document.getElementById('user-initial').textContent  = userName.charAt(0).toUpperCase();
+    document.getElementById('sidebar-story').textContent = mahabharataStory.substring(0, 500) + '…';
     loadHistory();
     if (window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
@@ -188,7 +210,6 @@
     window.speechSynthesis && window.speechSynthesis.cancel();
     const wrap = document.getElementById('messages');
     wrap.innerHTML = '';
-    // Build the new-chat intro safely without XSS risk
     const introDiv = document.createElement('div');
     introDiv.className = 'intro-msg';
     introDiv.id = 'intro-section';
@@ -199,16 +220,20 @@
       <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
       <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>`;
     wrap.appendChild(introDiv);
+    // Deactivate any active conv-item
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    activeDateEl = null;
     if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
   }
 
-  // ── LOAD HISTORY ──
+  // ── LOAD HISTORY FROM SERVER ──
   async function loadHistory() {
     try {
       const res  = await fetch('/api/conversations');
       const data = await res.json();
       allHistory = data.conversations || [];
       renderConvList();
+      // Auto-load last session into chat view
       if (allHistory.length > 0) {
         const last = allHistory[allHistory.length - 1];
         if (last.messages && last.messages.length > 0) {
@@ -217,34 +242,69 @@
           last.messages.forEach(m => { addMessage('user', m.user); addMessage('arjun', m.arjun); });
         }
       }
-    } catch (e) { console.error('loadHistory error:', e); }
+    } catch (e) {
+      console.error('loadHistory error:', e);
+    }
   }
 
-  // ── RENDER CONV LIST ──
-  function renderConvList() {
+  // ── UPDATE LOCAL HISTORY (called after every new message — FIX: keeps sidebar in sync) ──
+  function syncLocalHistory(userMsg, arjunReply) {
+    // Today's date in YYYY-MM-DD (same format as ISO timestamp prefix)
+    const today = new Date().toISOString().slice(0, 10);
+    const entry = { user: userMsg, arjun: arjunReply };
+
+    const existing = allHistory.find(g => g.date === today);
+    if (existing) {
+      // Today's group already exists — just push the new message in
+      existing.messages.push(entry);
+    } else {
+      // FIX: First message of the day — create today's group
+      allHistory.push({ date: today, messages: [entry] });
+    }
+    renderConvList(today);  // re-render and highlight today's group
+  }
+
+  // ── RENDER CONVERSATION LIST ──
+  function renderConvList(highlightDate = null) {
     const list = document.getElementById('conv-list');
     if (!allHistory || allHistory.length === 0) {
       list.innerHTML = '<div class="conv-empty">No conversations yet</div>';
       return;
     }
     list.innerHTML = '';
+
+    // Newest date first
     [...allHistory].reverse().forEach((conv, i) => {
       const item = document.createElement('div');
       item.className = 'conv-item';
-      if (i === 0) item.classList.add('active');
 
-      // FIX 03 — escape the preview text before inserting into innerHTML
-      const previewText = escapeHtml((conv.messages[0]?.user || 'Conversation').substring(0, 40));
+      // Highlight: the date we just wrote to, or index 0 (most recent) by default
+      const isActive = highlightDate ? conv.date === highlightDate : i === 0;
+      if (isActive) item.classList.add('active');
+
+      const previewText = escapeHtml((conv.messages[0]?.user || 'Conversation').substring(0, 38));
       const dateText    = escapeHtml(conv.date);
+      const msgCount    = conv.messages.length;
 
       item.innerHTML = `
         <div class="conv-dot">💬</div>
-        <div class="conv-meta">
+        <div class="conv-meta" style="flex:1;min-width:0;">
           <div class="conv-date">${dateText}</div>
           <div class="conv-preview">${previewText}…</div>
         </div>
-        <div class="conv-count">${conv.messages.length}</div>`;
-      item.onclick = () => loadConversation(conv, item);
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="conv-count">${msgCount}</div>
+          <button class="conv-delete-btn" title="Delete this conversation" onclick="deleteConversation(event, '${escapeHtml(conv.date)}', this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>`;
+
+      item.addEventListener('click', () => loadConversation(conv, item));
       list.appendChild(item);
     });
   }
@@ -253,11 +313,45 @@
   function loadConversation(conv, clickedEl) {
     document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
     clickedEl.classList.add('active');
+    activeDateEl = conv.date;
     const wrap = document.getElementById('messages');
     wrap.innerHTML = '';
     conv.messages.forEach(m => { addMessage('user', m.user); addMessage('arjun', m.arjun); });
     scrollBottom();
     if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+  }
+
+  // ── DELETE A CONVERSATION ──
+  async function deleteConversation(event, date, btnEl) {
+    // Stop click from bubbling up to loadConversation
+    event.stopPropagation();
+
+    if (!confirm(`Delete all messages from ${date}?\nThis cannot be undone.`)) return;
+
+    // Optimistic UI — remove immediately
+    allHistory = allHistory.filter(g => g.date !== date);
+    renderConvList();
+
+    // If the deleted date was currently displayed, show new chat screen
+    if (activeDateEl === date) {
+      newChat();
+    }
+
+    try {
+      const res = await fetch(`/api/conversations/${encodeURIComponent(date)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!data.success) {
+        // Roll back on failure — re-fetch from server
+        console.error('Delete failed:', data.error);
+        await loadHistory();
+      }
+    } catch (e) {
+      console.error('Delete error:', e);
+      // Roll back — re-fetch
+      await loadHistory();
+    }
   }
 
   // ── SEND SUGGESTION ──
@@ -285,11 +379,11 @@
     }
     const btn         = document.getElementById('voiceBtn');
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang            = "en-IN";
-    recognition.interimResults  = false;
-    recognition.onstart         = () => btn.classList.add('listening');
-    recognition.onend           = () => btn.classList.remove('listening');
-    recognition.onresult        = (e) => {
+    recognition.lang           = "en-IN";
+    recognition.interimResults = false;
+    recognition.onstart        = () => btn.classList.add('listening');
+    recognition.onend          = () => btn.classList.remove('listening');
+    recognition.onresult       = (e) => {
       const text = e.results[0][0].transcript;
       document.getElementById("user-input").value = text;
       autoResize(document.getElementById("user-input"));
@@ -309,7 +403,7 @@
     const cleanText = text.replace(/[\u0900-\u097F]+/g, '').replace(/\s+/g, ' ').trim();
     const speech    = new SpeechSynthesisUtterance(cleanText);
     speech.lang = "en-IN"; speech.rate = 0.82; speech.pitch = 0.35; speech.volume = 1;
-    const voices   = window.speechSynthesis.getVoices();
+    const voices    = window.speechSynthesis.getVoices();
     const preferred = ["Google UK English Male", "Microsoft David", "Microsoft Mark"];
     let selected    = null;
     for (const name of preferred) { selected = voices.find(v => v.name.includes(name)); if (selected) break; }
@@ -336,7 +430,7 @@
     try {
       const res  = await fetch('/api/chat', {
         method : 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body   : JSON.stringify({ message: msg })
       });
       const data  = await res.json();
@@ -344,30 +438,26 @@
       const reply = data.reply || "Something went wrong.";
       addMessage('arjun', reply);
       speak(reply);
+
+      // ── FIX: sync sidebar after every new message ──
+      syncLocalHistory(msg, reply);
+
     } catch (e) {
       typingEl.remove();
       addMessage('arjun', 'The connection to Kurukshetra was lost. Please try again 🙏');
     }
+
     isTyping = false;
     document.getElementById('send-btn').disabled = false;
     scrollBottom();
   }
 
   // ── ADD MESSAGE ──
-  // FIX 03 — XSS prevention: always escape text before using innerHTML.
-  // For Arjun messages, we escape first, then apply Devanagari wrapping (safe because
-  // we are only adding our own controlled HTML tags around already-escaped content).
   function addMessage(role, text) {
-    const wrap   = document.createElement('div');
-    wrap.className = `message ${role}`;
     const isArjun = role === 'arjun';
-    const time    = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    const time    = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Step 1: escape the raw text — kills any injected HTML/script tags
     let safeText = escapeHtml(text);
-
-    // Step 2: for Arjun replies only, wrap Devanagari runs in a shloka box.
-    // This is safe because safeText has already been HTML-escaped above.
     if (isArjun) {
       safeText = safeText.replace(/([\u0900-\u097F][^\n<]*)/g, '<div class="shloka-box">$1</div>');
     }

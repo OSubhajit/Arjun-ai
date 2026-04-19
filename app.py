@@ -545,6 +545,36 @@ def api_conversations():
     return jsonify({"conversations": _group_by_date(history)})
 
 
+@app.route('/api/conversations/<date>', methods=['DELETE'])
+def delete_conversation(date):
+    if 'user' not in session:
+        return jsonify({"error": "Not logged in"}), 401
+
+    # Basic date format validation — must be YYYY-MM-DD
+    import re
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date):
+        return jsonify({"error": "Invalid date format"}), 400
+
+    user_data = users_collection.find_one(
+        {"email": session['user']},
+        {"chat_history": 1, "_id": 0}
+    )
+    if not user_data:
+        return jsonify({"error": "User not found"}), 404
+
+    history     = user_data.get("chat_history", [])
+    new_history = [
+        e for e in history
+        if not e.get("timestamp", "").startswith(date)
+    ]
+
+    users_collection.update_one(
+        {"email": session['user']},
+        {"$set": {"chat_history": new_history}}
+    )
+    return jsonify({"success": True, "deleted_date": date})
+
+
 # FIX 04 — Restore the broken /api/history route (was orphaned dead code with no decorator)
 @app.route('/api/history')
 def api_history():
