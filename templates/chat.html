@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="/static/style.css"/>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
   <style>
-    /* Chat page needs full-height flex layout */
     body { height: 100vh; display: flex; overflow: hidden; }
     @media (max-width: 768px) { body { overflow: auto; } }
   </style>
@@ -31,7 +30,6 @@
       </button>
     </div>
 
-    <!-- Arjun Card -->
     <div class="arjun-card">
       <div class="arjun-avatar">🏹</div>
       <div class="arjun-name">Arjun</div>
@@ -39,13 +37,11 @@
       <div class="arjun-status"><div class="status-dot"></div>Awaiting your question</div>
     </div>
 
-    <!-- Mahabharata Story -->
     <div class="story-section">
       <div class="section-label">📜 The Mahabharata</div>
       <div class="story-text" id="sidebar-story"></div>
     </div>
 
-    <!-- Conversation History -->
     <div class="conv-section" id="conv-section">
       <div class="section-label">🗂 Conversation History</div>
       <div id="conv-list">
@@ -53,7 +49,6 @@
       </div>
     </div>
 
-    <!-- Footer: username → profile, logout -->
     <div class="sidebar-footer">
       <a href="/profile" class="user-info" title="View profile">
         <div class="user-avatar" id="user-initial">S</div>
@@ -139,11 +134,22 @@
   </main>
 
 <script>
-  const userName         = "{{ user_name }}";
-  const mahabharataStory = `{{ story | replace('\n', '\\n') | replace('"', '\\"') }}`;
-  let isTyping           = false;
-  let voiceEnabled       = true;
-  let allHistory         = [];
+  // FIX 15 — use tojson filter instead of manual string escaping in a template literal.
+  // tojson produces a proper JSON string (with quotes), safe against backticks, newlines, etc.
+  const userName         = {{ user_name | tojson }};
+  const mahabharataStory = {{ story | tojson }};
+
+  let isTyping     = false;
+  let voiceEnabled = true;
+  let allHistory   = [];
+
+  // ── FIX 03 — XSS prevention: escape all user-controlled text before inserting into DOM ──
+  function escapeHtml(text) {
+    // Creates a text node, reads back as HTML — browser handles all entity encoding
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
 
   // ── INIT ──
   document.addEventListener('DOMContentLoaded', () => {
@@ -180,14 +186,19 @@
   // ── NEW CHAT ──
   function newChat() {
     window.speechSynthesis && window.speechSynthesis.cancel();
-    document.getElementById('messages').innerHTML = `
-      <div class="intro-msg" id="intro-section">
-        <div class="intro-lotus">🏹</div>
-        <h2>Namaste, ${userName}</h2>
-        <p>I am here. Tell me what weighs on your heart today.</p>
-        <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
-        <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>
-      </div>`;
+    const wrap = document.getElementById('messages');
+    wrap.innerHTML = '';
+    // Build the new-chat intro safely without XSS risk
+    const introDiv = document.createElement('div');
+    introDiv.className = 'intro-msg';
+    introDiv.id = 'intro-section';
+    introDiv.innerHTML = `
+      <div class="intro-lotus">🏹</div>
+      <h2>Namaste, ${escapeHtml(userName)}</h2>
+      <p>I am here. Tell me what weighs on your heart today.</p>
+      <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
+      <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>`;
+    wrap.appendChild(introDiv);
     if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
   }
 
@@ -198,7 +209,6 @@
       const data = await res.json();
       allHistory = data.conversations || [];
       renderConvList();
-      // Load last session messages in chat
       if (allHistory.length > 0) {
         const last = allHistory[allHistory.length - 1];
         if (last.messages && last.messages.length > 0) {
@@ -207,7 +217,7 @@
           last.messages.forEach(m => { addMessage('user', m.user); addMessage('arjun', m.arjun); });
         }
       }
-    } catch (e) {}
+    } catch (e) { console.error('loadHistory error:', e); }
   }
 
   // ── RENDER CONV LIST ──
@@ -218,16 +228,20 @@
       return;
     }
     list.innerHTML = '';
-    // Show in reverse (newest first)
     [...allHistory].reverse().forEach((conv, i) => {
       const item = document.createElement('div');
       item.className = 'conv-item';
       if (i === 0) item.classList.add('active');
+
+      // FIX 03 — escape the preview text before inserting into innerHTML
+      const previewText = escapeHtml((conv.messages[0]?.user || 'Conversation').substring(0, 40));
+      const dateText    = escapeHtml(conv.date);
+
       item.innerHTML = `
         <div class="conv-dot">💬</div>
         <div class="conv-meta">
-          <div class="conv-date">${conv.date}</div>
-          <div class="conv-preview">${conv.messages[0]?.user?.substring(0, 40) || 'Conversation'}…</div>
+          <div class="conv-date">${dateText}</div>
+          <div class="conv-preview">${previewText}…</div>
         </div>
         <div class="conv-count">${conv.messages.length}</div>`;
       item.onclick = () => loadConversation(conv, item);
@@ -237,10 +251,8 @@
 
   // ── LOAD A SPECIFIC CONVERSATION ──
   function loadConversation(conv, clickedEl) {
-    // Mark active
     document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
     clickedEl.classList.add('active');
-    // Render messages
     const wrap = document.getElementById('messages');
     wrap.innerHTML = '';
     conv.messages.forEach(m => { addMessage('user', m.user); addMessage('arjun', m.arjun); });
@@ -271,13 +283,13 @@
       alert("Voice input not supported in this browser. Try Chrome.");
       return;
     }
-    const btn = document.getElementById('voiceBtn');
+    const btn         = document.getElementById('voiceBtn');
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = "en-IN";
-    recognition.interimResults = false;
-    recognition.onstart  = () => btn.classList.add('listening');
-    recognition.onend    = () => btn.classList.remove('listening');
-    recognition.onresult = (e) => {
+    recognition.lang            = "en-IN";
+    recognition.interimResults  = false;
+    recognition.onstart         = () => btn.classList.add('listening');
+    recognition.onend           = () => btn.classList.remove('listening');
+    recognition.onresult        = (e) => {
       const text = e.results[0][0].transcript;
       document.getElementById("user-input").value = text;
       autoResize(document.getElementById("user-input"));
@@ -295,11 +307,11 @@
     if (!voiceEnabled || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const cleanText = text.replace(/[\u0900-\u097F]+/g, '').replace(/\s+/g, ' ').trim();
-    const speech = new SpeechSynthesisUtterance(cleanText);
+    const speech    = new SpeechSynthesisUtterance(cleanText);
     speech.lang = "en-IN"; speech.rate = 0.82; speech.pitch = 0.35; speech.volume = 1;
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = ["Google UK English Male","Microsoft David","Microsoft Mark"];
-    let selected = null;
+    const voices   = window.speechSynthesis.getVoices();
+    const preferred = ["Google UK English Male", "Microsoft David", "Microsoft Mark"];
+    let selected    = null;
     for (const name of preferred) { selected = voices.find(v => v.name.includes(name)); if (selected) break; }
     if (!selected) selected = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('male'));
     if (selected) speech.voice = selected;
@@ -309,18 +321,25 @@
   // ── SEND MESSAGE ──
   async function sendMessage() {
     const input = document.getElementById('user-input');
-    const msg = input.value.trim();
+    const msg   = input.value.trim();
     if (!msg || isTyping) return;
+
     const intro = document.getElementById('intro-section');
     if (intro) intro.style.display = 'none';
+
     addMessage('user', msg);
     input.value = ''; input.style.height = 'auto';
     isTyping = true;
     document.getElementById('send-btn').disabled = true;
     const typingEl = addTyping();
+
     try {
-      const res  = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ message: msg }) });
-      const data = await res.json();
+      const res  = await fetch('/api/chat', {
+        method : 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body   : JSON.stringify({ message: msg })
+      });
+      const data  = await res.json();
       typingEl.remove();
       const reply = data.reply || "Something went wrong.";
       addMessage('arjun', reply);
@@ -335,21 +354,34 @@
   }
 
   // ── ADD MESSAGE ──
+  // FIX 03 — XSS prevention: always escape text before using innerHTML.
+  // For Arjun messages, we escape first, then apply Devanagari wrapping (safe because
+  // we are only adding our own controlled HTML tags around already-escaped content).
   function addMessage(role, text) {
-    const wrap = document.getElementById('messages');
-    const div  = document.createElement('div');
-    div.className = `message ${role}`;
+    const wrap   = document.createElement('div');
+    wrap.className = `message ${role}`;
     const isArjun = role === 'arjun';
-    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    let formattedText = text;
-    if (isArjun) formattedText = text.replace(/([\u0900-\u097F][^\n]*)/g, '<div class="shloka-box">$1</div>');
+    const time    = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+
+    // Step 1: escape the raw text — kills any injected HTML/script tags
+    let safeText = escapeHtml(text);
+
+    // Step 2: for Arjun replies only, wrap Devanagari runs in a shloka box.
+    // This is safe because safeText has already been HTML-escaped above.
+    if (isArjun) {
+      safeText = safeText.replace(/([\u0900-\u097F][^\n<]*)/g, '<div class="shloka-box">$1</div>');
+    }
+
+    const msgDiv = document.getElementById('messages');
+    const div    = document.createElement('div');
+    div.className = `message ${role}`;
     div.innerHTML = `
-      <div class="msg-avatar ${role}">${isArjun ? '🏹' : userName.charAt(0).toUpperCase()}</div>
+      <div class="msg-avatar ${role}">${isArjun ? '🏹' : escapeHtml(userName.charAt(0).toUpperCase())}</div>
       <div class="msg-content">
-        <div class="msg-bubble">${formattedText}</div>
-        <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${time}</div>
+        <div class="msg-bubble">${safeText}</div>
+        <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${escapeHtml(time)}</div>
       </div>`;
-    wrap.appendChild(div);
+    msgDiv.appendChild(div);
     scrollBottom();
   }
 
