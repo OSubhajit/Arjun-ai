@@ -1,38 +1,30 @@
 from flask import Flask, render_template, request, jsonify, session, redirect
-from collections import OrderedDict
-from pymongo import MongoClient, ASCENDING
-from pymongo.errors import DuplicateKeyError
-from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
 import os
-import re
-import secrets
-import hmac
+import smtplib
+import random
 import requests
+from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from pymongo import MongoClient, ASCENDING
+from dotenv import load_dotenv
 import bcrypt
 import traceback
 import sys
+import time
+from collections import defaultdict
 
+# ================= ENV =================
 load_dotenv()
 
 API_KEY    = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI  = os.getenv("MONGO_URI")
-SECRET_KEY = os.getenv("SECRET_KEY")
-IS_PROD    = os.getenv("RENDER") == "true"
-AI_MODEL   = os.getenv("AI_MODEL", "openai/gpt-3.5-turbo")
-
-if not SECRET_KEY:
-    if IS_PROD:
-        print("❌ SECRET_KEY env var not set — refusing to start in production")
-        sys.exit(1)
-    else:
-        SECRET_KEY = "dev_only_not_for_production"
-        print("⚠️  WARNING: Using dev SECRET_KEY. Set SECRET_KEY env var before deploying.")
+SECRET_KEY = os.getenv("SECRET_KEY", "arjunai_secret_key_fixed_2024")
+IS_PROD    = os.getenv("RENDER") == "true"   # Render sets RENDER=true automatically
 
 print("=== STARTUP ===")
 print("MONGO_URI:", "set" if MONGO_URI else "MISSING")
 print("API_KEY  :", "set" if API_KEY else "MISSING")
-print("AI_MODEL :", AI_MODEL)
 print("IS_PROD  :", IS_PROD)
 print("===============")
 
@@ -40,6 +32,7 @@ if not MONGO_URI:
     print("❌ MONGO_URI not found — exiting")
     sys.exit(1)
 
+# ================= MONGODB =================
 try:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     client.server_info()
@@ -51,157 +44,98 @@ except Exception as e:
 
 db               = client["OSubhajit"]
 users_collection = db["users"]
-otp_collection   = db["otp_store"]
-rate_collection  = db["rate_limits"]
+otp_collection   = db["otp_store"]   # FIX 1 — OTPs in MongoDB (survives restarts)
 
-# FIX 06 — unique index on email prevents duplicate accounts from race conditions
-try:
-    users_collection.create_index("email", unique=True, background=True)
-    print("✅ Unique email index ready")
-except Exception as e:
-    print("⚠️  Email index warning:", e)
-
+# Create TTL index so MongoDB auto-deletes expired OTPs
 try:
     otp_collection.create_index(
-        [("expires_at", ASCENDING)], expireAfterSeconds=0, background=True
+        [("expires_at", ASCENDING)],
+        expireAfterSeconds=0,
+        background=True
     )
     print("✅ OTP TTL index ready")
 except Exception as e:
     print("⚠️  OTP TTL index warning:", e)
 
-try:
-    rate_collection.create_index(
-        [("expires_at", ASCENDING)], expireAfterSeconds=0, background=True
-    )
-    print("✅ Rate limit TTL index ready")
-except Exception as e:
-    print("⚠️  Rate limit TTL index warning:", e)
-
+# ================= APP =================
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
-app.config['SESSION_COOKIE_SECURE']      = IS_PROD
+app.config['SESSION_COOKIE_SECURE']      = IS_PROD   # FIX 2 — True on HTTPS, False locally
 app.config['SESSION_COOKIE_HTTPONLY']    = True
 app.config['SESSION_COOKIE_SAMESITE']   = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
-
-# FIX 04 — Security headers on every response
-@app.after_request
-def set_security_headers(response):
-    response.headers['X-Frame-Options']        = 'DENY'
-    response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['Referrer-Policy']        = 'strict-origin-when-cross-origin'
-    response.headers['Content-Security-Policy'] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com "
-        "https://partner.googleadservices.com https://tpc.googlesyndication.com; "
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-        "font-src 'self' https://fonts.gstatic.com; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self'; "
-        "frame-src https://googleads.g.doubleclick.net https://tpc.googlesyndication.com;"
-    )
-    return response
-
-
-_EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
-
-def is_valid_email(email: str) -> bool:
-    return bool(_EMAIL_RE.match(email))
-
+# ================= RATE LIMITER (FIX 6) =================
+_rate_store = defaultdict(list)
 
 def is_rate_limited(ip: str, max_calls: int = 3, window_sec: int = 600) -> bool:
-    """OTP rate limiter — 3 sends per 10 minutes per IP."""
-    now          = datetime.now(timezone.utc)
-    window_start = now - timedelta(seconds=window_sec)
-    count = rate_collection.count_documents({"ip": ip, "created_at": {"$gte": window_start}})
-    if count >= max_calls:
+    now   = time.time()
+    calls = [t for t in _rate_store[ip] if now - t < window_sec]
+    _rate_store[ip] = calls
+    if len(calls) >= max_calls:
         return True
-    rate_collection.insert_one({
-        "ip": ip, "created_at": now,
-        "expires_at": now + timedelta(seconds=window_sec)
-    })
+    _rate_store[ip].append(now)
     return False
 
-
-# FIX 01 — Login brute-force protection (separate key-space)
-def is_login_rate_limited(ip: str) -> bool:
-    """Max 10 login attempts per 15 minutes per IP."""
-    now          = datetime.now(timezone.utc)
-    window_start = now - timedelta(minutes=15)
-    key = f"login:{ip}"
-    count = rate_collection.count_documents({"ip": key, "created_at": {"$gte": window_start}})
-    if count >= 10:
-        return True
-    rate_collection.insert_one({
-        "ip": key, "created_at": now,
-        "expires_at": now + timedelta(minutes=15)
-    })
-    return False
-
-
-def verify_otp_value(stored: str, provided: str) -> bool:
-    """Constant-time comparison — prevents timing-based OTP brute-force."""
-    if not stored or not provided:
-        return False
-    return hmac.compare_digest(str(stored), str(provided))
-
-
+# ================= EMAIL =================
 def send_email_otp(email, otp, name="User"):
-    script_url = os.getenv("GMAIL_SCRIPT_URL")
-    if not script_url:
-        print("❌ GMAIL_SCRIPT_URL not set")
+    sender   = os.getenv("EMAIL_USER")
+    password = os.getenv("EMAIL_PASS")
+
+    if not sender or not password:
+        print("❌ EMAIL_USER or EMAIL_PASS not set")
         return False
+
+    html = f"""
+    <div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#ff6b35,#f7931e);padding:30px;text-align:center;">
+        <h1 style="color:white;margin:0;">🧠 GitaPath — Arjun AI</h1>
+      </div>
+      <div style="padding:30px;text-align:center;">
+        <p>Hello <strong>{name}</strong>, your OTP is:</p>
+        <div style="font-size:38px;font-weight:bold;color:#ff6b35;letter-spacing:8px;margin:20px 0;">{otp}</div>
+        <p style="color:#999;font-size:13px;">Valid for 10 minutes. Do not share this OTP.</p>
+      </div>
+    </div>
+    """
+
     try:
-        response = requests.post(
-            script_url,
-            json={"to": email, "name": name, "otp": otp},
-            timeout=15
-        )
-        result = response.json()
-        if result.get("success"):
-            print(f"✅ OTP sent to {email}")
-            return True
-        print(f"❌ Script error: {result.get('error')}")
-        return False
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "🔐 Your OTP — GitaPath Arjun AI"
+        msg["From"]    = f"Arjun AI <{sender}>"
+        msg["To"]      = email
+        msg.attach(MIMEText(f"Your OTP is: {otp}", "plain"))
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(sender, password)
+            server.send_message(msg)
+
+        print(f"✅ OTP sent to {email}")
+        return True
     except Exception as e:
         print(f"❌ Email error: {e}")
         return False
 
-
+# ================= OTP HELPERS (FIX 1 & 3) =================
 def otp_save(email: str, data: dict):
     data["email"]      = email
     data["expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=10)
-    data.setdefault("attempts", 0)   # FIX 05 — track verify attempts
     otp_collection.replace_one({"email": email}, data, upsert=True)
-
 
 def otp_get(email: str):
     doc = otp_collection.find_one({"email": email})
     if not doc:
         return None
-    expires_at = doc["expires_at"]
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-    if datetime.now(timezone.utc) > expires_at:
+    if datetime.now(timezone.utc) > doc["expires_at"]:
         otp_collection.delete_one({"email": email})
         return None
     return doc
 
-
 def otp_delete(email: str):
     otp_collection.delete_one({"email": email})
 
-
-# FIX 05 — Increment attempt counter; auto-lock after 5 failures
-def otp_record_failed_attempt(email: str) -> int:
-    result = otp_collection.find_one_and_update(
-        {"email": email},
-        {"$inc": {"attempts": 1}},
-        return_document=True
-    )
-    return result["attempts"] if result else 999
-
+# ================= ROUTES =================
 
 @app.route('/')
 def index():
@@ -221,36 +155,26 @@ def login():
 
     email    = data.get('email', '').strip().lower()
     password = data.get('password', '')
-    remember = bool(data.get('rememberMe', False))   # FIX 08
 
     if not email or not password:
         return jsonify({"success": False, "message": "Email and password required"})
-
-    if not is_valid_email(email):
-        return jsonify({"success": False, "message": "Invalid email address"})
-
-    # FIX 01 — brute-force protection
-    ip = request.remote_addr or "unknown"
-    if is_login_rate_limited(ip):
-        return jsonify({"success": False, "message": "Too many login attempts. Please wait 15 minutes."})
 
     user = users_collection.find_one({"email": email})
 
     if not user or not bcrypt.checkpw(password.encode(), user['password'].encode()):
         return jsonify({"success": False, "message": "Invalid credentials"})
 
-    # FIX 02 — clear before set prevents session fixation
-    session.clear()
-    session.permanent = remember   # FIX 08
+    session.permanent = True
     session['user']   = email
     session['name']   = user['name']
+
     return jsonify({"success": True, "redirect": "/chat"})
 
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'GET':
-        return render_template('login.html')
+        return render_template('login.html')  # register tab lives inside login.html
 
     data = request.get_json()
     if not data:
@@ -262,9 +186,6 @@ def register():
     if not email or not action:
         return jsonify({"success": False, "message": "Email and action required"})
 
-    if not is_valid_email(email):
-        return jsonify({"success": False, "message": "Invalid email address"})
-
     if action == "send_otp":
         name     = data.get('name', '').strip()
         password = data.get('password', '')
@@ -272,9 +193,7 @@ def register():
         if not name or not password:
             return jsonify({"success": False, "message": "All fields required"})
 
-        if len(password) < 8:
-            return jsonify({"success": False, "message": "Password must be at least 8 characters"})
-
+        # FIX 6 — rate limit OTP sending
         ip = request.remote_addr or "unknown"
         if is_rate_limited(ip):
             return jsonify({"success": False, "message": "Too many OTP requests. Please wait 10 minutes."})
@@ -286,21 +205,18 @@ def register():
             print("DB error:", e)
             return jsonify({"success": False, "message": "Database error. Please try again."})
 
-        otp             = str(secrets.randbelow(900000) + 100000)
-        hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        otp_save(email, {
-            "otp": otp, "name": name,
-            "password": hashed_password, "type": "register"
-        })
+        otp = str(random.randint(100000, 999999))
+        # FIX 1 — store in MongoDB
+        otp_save(email, {"otp": otp, "name": name, "password": password, "type": "register"})
 
         sent = send_email_otp(email, otp, name=name)
         if not sent:
-            return jsonify({"success": False, "message": "Failed to send OTP. Check GMAIL_SCRIPT_URL."})
+            return jsonify({"success": False, "message": "Failed to send OTP. Check EMAIL_USER and EMAIL_PASS."})
 
         return jsonify({"success": True, "message": "OTP sent to your email!"})
 
     elif action == "verify_otp":
-        user_data = otp_get(email)
+        user_data = otp_get(email)  # FIX 1 — from MongoDB
 
         if not user_data:
             return jsonify({"success": False, "message": "OTP not found or expired. Please request a new one."})
@@ -308,34 +224,26 @@ def register():
         if user_data.get("type") != "register":
             return jsonify({"success": False, "message": "Invalid OTP type."})
 
-        # FIX 05 — block after 5 failed attempts
-        if user_data.get("attempts", 0) >= 5:
-            otp_delete(email)
-            return jsonify({"success": False, "message": "Too many failed attempts. Please request a new OTP."})
-
-        if not verify_otp_value(user_data["otp"], data.get("otp", "")):
-            attempts  = otp_record_failed_attempt(email)
-            remaining = max(0, 5 - attempts)
-            return jsonify({"success": False, "message": f"Invalid OTP. {remaining} attempt(s) remaining."})
+        if user_data["otp"] != data.get("otp"):
+            return jsonify({"success": False, "message": "Invalid OTP"})
 
         try:
+            if users_collection.find_one({"email": email}):
+                return jsonify({"success": False, "message": "User already exists"})
+
+            hashed = bcrypt.hashpw(user_data["password"].encode(), bcrypt.gensalt()).decode()
             users_collection.insert_one({
                 "email"       : email,
                 "name"        : user_data["name"],
-                "password"    : user_data["password"],
+                "password"    : hashed,
                 "chat_history": [],
                 "notes"       : []
             })
-        except DuplicateKeyError:
-            # FIX 06 — unique index caught race condition duplicate
-            otp_delete(email)
-            return jsonify({"success": False, "message": "User already exists. Please log in."})
         except Exception as e:
             print("DB error:", e)
             return jsonify({"success": False, "message": "Database error. Please try again."})
 
         otp_delete(email)
-        session.clear()   # FIX 02
         session.permanent = True
         session['user']   = email
         session['name']   = user_data["name"]
@@ -348,9 +256,7 @@ def register():
 def chat():
     if 'user' not in session:
         return redirect('/')
-    story = ("Arjun stood on the battlefield of Kurukshetra, overwhelmed by doubt and grief. "
-             "Lord Krishna, his charioteer, spoke the timeless wisdom of the Bhagavad Gita — "
-             "guiding Arjun back to his duty, his purpose, and inner peace.")
+    story = "Arjun stood on the battlefield of Kurukshetra, overwhelmed by doubt and grief. Lord Krishna, his charioteer, spoke the timeless wisdom of the Bhagavad Gita — guiding Arjun back to his duty, his purpose, and inner peace."
     return render_template('chat.html', user_name=session['name'], story=story)
 
 
@@ -359,55 +265,35 @@ def forgot():
     if request.method == 'GET':
         return render_template('forgot.html')
 
-    data = request.get_json()
-    if not data:
-        return jsonify({"success": False, "message": "Invalid request"})
-
+    data   = request.get_json()
     action = data.get("action")
     email  = data.get("email", "").strip().lower()
 
-    if not email or not is_valid_email(email):
-        return jsonify({"success": False, "message": "Valid email is required"})
+    user = users_collection.find_one({"email": email})
+    if not user:
+        return jsonify({"success": False, "message": "User not found"})
 
     if action == "send_otp":
         ip = request.remote_addr or "unknown"
         if is_rate_limited(ip):
             return jsonify({"success": False, "message": "Too many OTP requests. Please wait 10 minutes."})
 
-        user = users_collection.find_one({"email": email})
-        if user:
-            otp = str(secrets.randbelow(900000) + 100000)
-            otp_save(email, {"otp": otp, "name": user.get("name", "User"), "type": "forgot"})
-            send_email_otp(email, otp, name=user.get("name", "User"))
-
-        return jsonify({
-            "success": True,
-            "message": "If this email is registered, you'll receive an OTP shortly."
-        })
+        otp = str(random.randint(100000, 999999))
+        # FIX 1 & 3 — consistent structure, same as register flow
+        otp_save(email, {"otp": otp, "name": user.get("name", "User"), "type": "forgot"})
+        sent = send_email_otp(email, otp, name=user.get("name", "User"))
+        if not sent:
+            return jsonify({"success": False, "message": "Failed to send OTP"})
+        return jsonify({"success": True, "message": "OTP sent!"})
 
     if action == "reset_password":
-        otp          = data.get("otp", "")
-        new_password = data.get("password", "")
+        otp          = data.get("otp")
+        new_password = data.get("password")
 
-        if not new_password:
-            return jsonify({"success": False, "message": "New password is required"})
-        if len(new_password) < 8:
-            return jsonify({"success": False, "message": "Password must be at least 8 characters"})
-
+        # FIX 3 — consistent read from MongoDB
         user_data = otp_get(email)
-
-        # FIX 05 — attempt limit on forgot-password OTP too
-        if user_data and user_data.get("attempts", 0) >= 5:
-            otp_delete(email)
-            return jsonify({"success": False, "message": "Too many failed attempts. Please request a new OTP."})
-
-        if not user_data or not verify_otp_value(user_data.get("otp", ""), otp):
-            if user_data:
-                attempts  = otp_record_failed_attempt(email)
-                remaining = max(0, 5 - attempts)
-                return jsonify({"success": False, "message": f"Invalid OTP. {remaining} attempt(s) remaining."})
+        if not user_data or user_data.get("otp") != otp:
             return jsonify({"success": False, "message": "Invalid or expired OTP"})
-
         if user_data.get("type") != "forgot":
             return jsonify({"success": False, "message": "Invalid OTP type"})
 
@@ -416,7 +302,7 @@ def forgot():
         otp_delete(email)
         return jsonify({"success": True})
 
-    return jsonify({"success": False, "message": "Invalid action"})
+    return jsonify({"success": False})
 
 
 @app.route('/help')
@@ -427,33 +313,19 @@ def help_page():
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     if 'user' not in session:
-        return jsonify({'reply': 'Session expired. Please log in again.'}), 401
+        return jsonify({'reply': 'Session expired. Please log in again.'})
 
-    data = request.get_json()
-    if not data:
-        return jsonify({'reply': 'Invalid request'}), 400
-
+    data         = request.get_json()
     user_message = data.get("message", "").strip()
-    session_id   = data.get("session_id", "").strip() or str(int(datetime.now(timezone.utc).timestamp() * 1000))
-    # Validate session_id: digits only (ms timestamp) or date:-prefixed legacy format, max 30 chars
-    if not re.match(r'^[\d]{1,20}$|^date:[\d]{4}-[\d]{2}-[\d]{2}$', session_id):
-        session_id = str(int(datetime.now(timezone.utc).timestamp() * 1000))
     if not user_message:
-        return jsonify({'reply': 'Empty message'}), 400
-
-    if len(user_message) > 2000:
-        return jsonify({'reply': 'Message too long. Please keep it under 2000 characters.'}), 400
-
+        return jsonify({'reply': 'Empty message'})
     if not API_KEY:
-        return jsonify({'reply': 'API key missing — please contact support.'}), 500
+        return jsonify({'reply': 'API key missing'})
 
     user      = session['user']
-    user_data = users_collection.find_one(
-        {"email": user},
-        {"chat_history": {"$slice": -5}, "name": 1, "_id": 0}
-    )
+    user_data = users_collection.find_one({"email": user})
     if not user_data:
-        return jsonify({'reply': 'User not found'}), 404
+        return jsonify({'reply': 'User not found'})
 
     history  = user_data.get("chat_history", [])
     messages = [{"role": "system", "content": """You are Arjun — the legendary warrior of Kurukshetra from the Mahabharata.
@@ -486,205 +358,80 @@ HOW YOU RESPOND:
 - Never break character under any circumstances
 
 EXAMPLE SHLOKAS YOU USE NATURALLY:
-- On action without attachment: \"Karmanye vadhikaraste ma phaleshu kadachana\" (Chapter 2.47)
-- On the eternal soul: \"Na jayate mriyate va kadachin\" (Chapter 2.20)
-- On equanimity: \"Sukha dukhe same kritva labhalabhau jayajayau\" (Chapter 2.38)
-- On surrendering to God: \"Sarva dharman parityajya mam ekam sharanam vraja\" (Chapter 18.66)
-- On the self: \"Aham atma gudakesha sarva bhutashayasthitah\" (Chapter 10.20)
-- On fear: \"Klaibyam ma sma gamah partha naitat tvayy upapadyate\" (Chapter 2.3)
+- On action without attachment: "Karmanye vadhikaraste ma phaleshu kadachana" (Chapter 2.47)
+- On the eternal soul: "Na jayate mriyate va kadachin" (Chapter 2.20)
+- On equanimity: "Sukha dukhe same kritva labhalabhau jayajayau" (Chapter 2.38)
+- On surrendering to God: "Sarva dharman parityajya mam ekam sharanam vraja" (Chapter 18.66)
+- On the self: "Aham atma gudakesha sarva bhutashayasthitah" (Chapter 10.20)
+- On fear: "Klaibyam ma sma gamah partha naitat tvayy upapadyate" (Chapter 2.3)
 
 REMEMBER:
 You stood on the battlefield of Kurukshetra, ready to give up — and Krishna's words changed everything.
 Now you are here to pass that same transformation to every person who comes to you with their battle."""}]
 
-    for chat_entry in history:
-        messages.append({"role": "user",      "content": chat_entry["user"]})
-        messages.append({"role": "assistant", "content": chat_entry["arjun"]})
+    for chat in history[-5:]:
+        messages.append({"role": "user",      "content": chat["user"]})
+        messages.append({"role": "assistant", "content": chat["arjun"]})
 
     messages.append({"role": "user", "content": user_message})
-
-    ai_success = False
-    reply      = "Server error. Please try again."
 
     try:
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
-            json={"model": AI_MODEL, "messages": messages, "temperature": 0.7},
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type" : "application/json"
+            },
+            json={
+                "model"      : "openai/gpt-3.5-turbo",
+                "messages"   : messages,
+                "temperature": 0.7
+            },
             timeout=20
         )
         result = response.json()
         if "choices" in result:
-            reply      = result["choices"][0]["message"]["content"].strip()
-            ai_success = True
+            reply = result["choices"][0]["message"]["content"].strip()
         else:
-            reply = result.get("error", {}).get("message", "AI could not respond at this time.")
-    except requests.exceptions.Timeout:
-        reply = "The connection timed out. Please try again."
+            reply = result.get("error", {}).get("message", "AI could not respond")
     except Exception as e:
         print("AI ERROR:", e)
+        reply = "Server error. Please try again."
 
-    # FIX 07 — only persist successful AI responses; never store error strings
-    if ai_success:
-        new_entry = {
-            "timestamp" : datetime.now(timezone.utc).isoformat(),
-            "session_id": session_id,
-            "user"      : user_message,
-            "arjun"     : reply
-        }
-        users_collection.update_one(
-            {"email": user},
-            {"$push": {"chat_history": {"$each": [new_entry], "$slice": -50}}}
-        )
+    new_entry = {
+        "timestamp": str(datetime.now()),
+        "user"     : user_message,
+        "arjun"    : reply
+    }
 
+    # FIX 4 — cap history at 50 with $push + $slice (no unbounded growth)
+    users_collection.update_one(
+        {"email": user},
+        {"$push": {"chat_history": {"$each": [new_entry], "$slice": -50}}}
+    )
     return jsonify({'reply': reply})
 
 
-@app.route('/profile')
-def profile():
-    if 'user' not in session:
-        return redirect('/')
-    return render_template('profile.html')
-
-
-@app.route('/api/profile')
-def api_profile():
-    if 'user' not in session:
-        return jsonify({"error": "Not logged in"}), 401
-
-    user_data = users_collection.find_one(
-        {"email": session['user']},
-        {"name": 1, "email": 1, "chat_history": 1, "_id": 0}
-    )
-    if not user_data:
-        return jsonify({"error": "User not found"}), 404
-
-    history       = user_data.get("chat_history", [])
-    conversations = _group_by_date(history)
-
-    return jsonify({
-        "name"           : user_data.get("name", ""),
-        "email"          : user_data.get("email", ""),
-        "total_messages" : len(history),
-        "total_sessions" : len(conversations),
-        "conversations"  : conversations
-    })
-
-
-@app.route('/api/conversations')
-def api_conversations():
-    if 'user' not in session:
-        return jsonify({"conversations": []}), 401
-
-    user_data = users_collection.find_one(
-        {"email": session['user']},
-        {"chat_history": 1, "_id": 0}
-    )
-    if not user_data:
-        return jsonify({"conversations": []})
-    history = user_data.get("chat_history", [])
-    return jsonify({"conversations": _group_by_date(history)})
-
-
-@app.route('/api/conversations/<date>', methods=['DELETE'])
-def delete_conversation(date):
-    if 'user' not in session:
-        return jsonify({"error": "Not logged in"}), 401
-
-    # Accept: numeric session_id (ms timestamp), date: prefix, or legacy YYYY-MM-DD
-    is_date_only   = bool(re.match(r'^\d{4}-\d{2}-\d{2}$', date))
-    is_session_id  = bool(re.match(r'^\d+$', date))
-    is_date_prefix = date.startswith("date:")
-    if not (is_date_only or is_session_id or is_date_prefix):
-        return jsonify({"error": "Invalid session identifier"}), 400
-
-    user_data = users_collection.find_one(
-        {"email": session['user']},
-        {"chat_history": 1, "_id": 0}
-    )
-    if not user_data:
-        return jsonify({"error": "User not found"}), 404
-
-    history = user_data.get("chat_history", [])
-
-    if is_session_id:
-        new_history = [e for e in history if e.get("session_id") != date]
-    elif is_date_prefix:
-        date_val = date[5:]
-        new_history = [e for e in history
-                       if not (not e.get("session_id") and e.get("timestamp", "").startswith(date_val))]
-    else:
-        new_history = [e for e in history if not e.get("timestamp", "").startswith(date)]
-
-    users_collection.update_one(
-        {"email": session['user']},
-        {"$set": {"chat_history": new_history}}
-    )
-    return jsonify({"success": True, "deleted_session": date})
-
-
 @app.route('/api/history')
-def api_history():
+def history():
     if 'user' not in session:
-        return jsonify({"history": []}), 401
-    user_data = users_collection.find_one(
-        {"email": session['user']},
-        {"chat_history": {"$slice": -10}, "_id": 0}
-    )
-    if not user_data:
         return jsonify({"history": []})
-    return jsonify({"history": user_data.get("chat_history", [])})
-
-
-def _group_by_session(history):
-    """Group chat_history entries by session_id.
-    Old entries without session_id are grouped by date (backward compat).
-    Returns list of {session_id, label, date, messages} dicts."""
-    groups = OrderedDict()
-    for entry in history:
-        ts         = entry.get("timestamp", "")
-        session_id = entry.get("session_id") or ("date:" + (ts[:10] if ts else "unknown"))
-        if session_id not in groups:
-            groups[session_id] = {
-                "session_id": session_id,
-                "label"     : _session_label(ts),
-                "date"      : ts[:10] if ts else "Unknown",
-                "messages"  : []
-            }
-        groups[session_id]["messages"].append({
-            "user"     : entry.get("user", ""),
-            "arjun"    : entry.get("arjun", ""),
-            "timestamp": ts
-        })
-    return list(groups.values())
-
-
-def _session_label(ts: str) -> str:
-    """Convert ISO timestamp to human-readable session label."""
-    try:
-        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        return dt.strftime("%b %d, %Y · %I:%M %p").lstrip("0")
-    except Exception:
-        return ts[:16] if ts else "Unknown"
-
-
-# Keep _group_by_date as alias for backward compat with profile page
-def _group_by_date(history):
-    return _group_by_session(history)
+    user_data = users_collection.find_one({"email": session['user']})
+    return jsonify({"history": user_data.get("chat_history", [])[-10:]})
 
 
 @app.route('/privacy')
 def privacy():
-    return render_template('privacy.html')
+    return render_template('privacy.html')   # FIX 8 — proper template
 
 
-# FIX 03 — POST-only logout prevents CSRF logout attacks via <img> or link injection
-@app.route('/logout', methods=['POST'])
+@app.route('/logout')
 def logout():
     session.clear()
-    return jsonify({"success": True, "redirect": "/"})
+    return redirect('/')
 
 
+# ================= RUN =================
 if __name__ == "__main__":
     try:
         port = int(os.environ.get("PORT", 5000))
