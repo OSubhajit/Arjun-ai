@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="google-adsense-account" content="ca-pub-7813661458323342">
   <title>GitaPath — Speak with Arjun</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/static/style.css"/>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
  <style>
@@ -423,14 +423,37 @@
     if (!voiceEnabled || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const cleanText = text.replace(/[\u0900-\u097F]+/g, '').replace(/\s+/g, ' ').trim();
-    const speech    = new SpeechSynthesisUtterance(cleanText);
-    speech.lang = "en-IN"; speech.rate = 0.82; speech.pitch = 0.35; speech.volume = 1;
-    const voices    = window.speechSynthesis.getVoices();
-    const preferred = ["Google UK English Male", "Microsoft David", "Microsoft Mark"];
-    let selected    = null;
-    for (const name of preferred) { selected = voices.find(v => v.name.includes(name)); if (selected) break; }
+    if (!cleanText) return;
+    const speech = new SpeechSynthesisUtterance(cleanText);
+
+    // Arjun — deep, calm, authoritative warrior-sage
+    speech.lang   = 'en-GB';   // British English — more gravitas than en-IN
+    speech.rate   = 0.75;      // slow, deliberate, wise
+    speech.pitch  = 0.1;       // as deep as possible
+    speech.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+
+    // Priority: deep UK male > US male > any male > any English
+    const preferred = [
+      'Google UK English Male',
+      'Microsoft George',       // deep UK male (Windows)
+      'Daniel',                 // macOS deep UK male
+      'Arthur',                 // macOS UK male
+      'Microsoft David',
+      'Microsoft Mark',
+      'Google US English',
+    ];
+    let selected = null;
+    for (const name of preferred) {
+      selected = voices.find(v => v.name.includes(name));
+      if (selected) break;
+    }
+    if (!selected) selected = voices.find(v => v.lang === 'en-GB');
     if (!selected) selected = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('male'));
+    if (!selected) selected = voices.find(v => v.lang.startsWith('en'));
     if (selected) speech.voice = selected;
+
     window.speechSynthesis.speak(speech);
   }
 

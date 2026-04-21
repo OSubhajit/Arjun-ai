@@ -5,24 +5,24 @@
 
 /* ── VARIABLES ── */
 :root {
-  --bg:           #0a0806;
-  --sidebar-bg:   #0d0b08;
-  --panel:        #110f0a;
-  --panel-2:      #151209;
-  --border:       #2e2616;
-  --border-light: rgba(200,169,110,0.18);
-  --accent:       #c8a96e;
-  --accent-bright:#d4b87a;
-  --accent-dim:   rgba(200,169,110,0.12);
-  --accent-glow:  rgba(200,169,110,0.25);
-  --accent2:      #8b6914;
-  --text:         #e8e0cc;
-  --text-soft:    #c4b89a;
-  --muted:        #7a6f58;
-  --muted-light:  #9a8f78;
-  --input-bg:     #17130b;
-  --user-bubble:  #1e190f;
-  --arjun-bubble: #130e0a;
+  --bg:           #05080f;
+  --sidebar-bg:   #070b16;
+  --panel:        #0c1122;
+  --panel-2:      #101628;
+  --border:       #1c2540;
+  --border-light: rgba(212,168,85,0.18);
+  --accent:       #d4a855;
+  --accent-bright:#e8c070;
+  --accent-dim:   rgba(212,168,85,0.10);
+  --accent-glow:  rgba(212,168,85,0.24);
+  --accent2:      #9b761a;
+  --text:         #eae6f8;
+  --text-soft:    #b8b0d4;
+  --muted:        #6860a0;
+  --muted-light:  #8878b8;
+  --input-bg:     #090d1c;
+  --user-bubble:  #111830;
+  --arjun-bubble: #0c1228;
   --success:      #7ab88a;
   --error:        #e07070;
   --saffron:      #ff9933;
@@ -110,7 +110,7 @@ input, textarea { font-family: inherit; }
   box-shadow: 0 4px 16px rgba(200,169,110,0.3);
 }
 .brand-name {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text);
@@ -424,7 +424,7 @@ input, textarea { font-family: inherit; }
   animation: pulse 3s infinite;
 }
 .arjun-name {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--accent);
@@ -632,7 +632,7 @@ input, textarea { font-family: inherit; }
 }
 .chat-header-info { flex: 1; }
 .chat-header-name {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1rem;
   font-weight: 600;
   color: var(--accent);
@@ -692,7 +692,7 @@ input, textarea { font-family: inherit; }
   filter: drop-shadow(0 0 24px rgba(200,169,110,0.5));
 }
 .intro-msg h2 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.6rem;
   color: var(--accent);
   margin-bottom: 10px;
@@ -967,7 +967,7 @@ input, textarea { font-family: inherit; }
 }
 .auth-heading { margin-bottom: 26px; }
 .auth-heading h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.75rem;
   font-weight: 600;
   letter-spacing: -0.03em;
@@ -1088,7 +1088,7 @@ input, textarea { font-family: inherit; }
   border: 3px solid rgba(200,169,110,0.4);
 }
 .profile-user-name {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.3rem;
   font-weight: 600;
   color: var(--text);
@@ -1112,7 +1112,7 @@ input, textarea { font-family: inherit; }
   text-align: center;
 }
 .stat-value {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.4rem;
   font-weight: 600;
   color: var(--accent);
@@ -1139,7 +1139,7 @@ input, textarea { font-family: inherit; }
   justify-content: space-between;
 }
 .panel-title {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--accent);
@@ -1272,7 +1272,7 @@ input, textarea { font-family: inherit; }
 }
 .simple-logo { text-align: center; font-size: 36px; margin-bottom: 8px; }
 .simple-card h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Cinzel', serif;
   color: var(--accent);
   text-align: center;
   font-size: 1.6rem;
