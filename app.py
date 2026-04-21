@@ -434,6 +434,10 @@ def api_chat():
         return jsonify({'reply': 'Invalid request'}), 400
 
     user_message = data.get("message", "").strip()
+    session_id   = data.get("session_id", "").strip() or str(int(datetime.now(timezone.utc).timestamp() * 1000))
+    # Validate session_id: digits only (ms timestamp) or date:-prefixed legacy format, max 30 chars
+    if not re.match(r'^[\d]{1,20}$|^date:[\d]{4}-[\d]{2}-[\d]{2}$', session_id):
+        session_id = str(int(datetime.now(timezone.utc).timestamp() * 1000))
     if not user_message:
         return jsonify({'reply': 'Empty message'}), 400
 
@@ -523,9 +527,10 @@ Now you are here to pass that same transformation to every person who comes to y
     # FIX 07 — only persist successful AI responses; never store error strings
     if ai_success:
         new_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "user"     : user_message,
-            "arjun"    : reply
+            "timestamp" : datetime.now(timezone.utc).isoformat(),
+            "session_id": session_id,
+            "user"      : user_message,
+            "arjun"     : reply
         }
         users_collection.update_one(
             {"email": user},
@@ -586,9 +591,12 @@ def delete_conversation(date):
     if 'user' not in session:
         return jsonify({"error": "Not logged in"}), 401
 
-    # FIX 11 — re imported at top; no duplicate import here
-    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date):
-        return jsonify({"error": "Invalid date format"}), 400
+    # Accept: numeric session_id (ms timestamp), date: prefix, or legacy YYYY-MM-DD
+    is_date_only   = bool(re.match(r'^\d{4}-\d{2}-\d{2}$', date))
+    is_session_id  = bool(re.match(r'^\d+$', date))
+    is_date_prefix = date.startswith("date:")
+    if not (is_date_only or is_session_id or is_date_prefix):
+        return jsonify({"error": "Invalid session identifier"}), 400
 
     user_data = users_collection.find_one(
         {"email": session['user']},
@@ -597,14 +605,22 @@ def delete_conversation(date):
     if not user_data:
         return jsonify({"error": "User not found"}), 404
 
-    history     = user_data.get("chat_history", [])
-    new_history = [e for e in history if not e.get("timestamp", "").startswith(date)]
+    history = user_data.get("chat_history", [])
+
+    if is_session_id:
+        new_history = [e for e in history if e.get("session_id") != date]
+    elif is_date_prefix:
+        date_val = date[5:]
+        new_history = [e for e in history
+                       if not (not e.get("session_id") and e.get("timestamp", "").startswith(date_val))]
+    else:
+        new_history = [e for e in history if not e.get("timestamp", "").startswith(date)]
 
     users_collection.update_one(
         {"email": session['user']},
         {"$set": {"chat_history": new_history}}
     )
-    return jsonify({"success": True, "deleted_date": date})
+    return jsonify({"success": True, "deleted_session": date})
 
 
 @app.route('/api/history')
@@ -620,23 +636,41 @@ def api_history():
     return jsonify({"history": user_data.get("chat_history", [])})
 
 
-def _group_by_date(history):
-    """Group flat chat_history into date-keyed sessions.
-    FIX 12 — OrderedDict now imported at module level."""
+def _group_by_session(history):
+    """Group chat_history entries by session_id.
+    Old entries without session_id are grouped by date (backward compat).
+    Returns list of {session_id, label, date, messages} dicts."""
     groups = OrderedDict()
     for entry in history:
-        try:
-            ts   = entry.get("timestamp", "")
-            date = ts[:10] if ts else "Unknown"
-        except Exception:
-            date = "Unknown"
-        if date not in groups:
-            groups[date] = []
-        groups[date].append({
-            "user" : entry.get("user", ""),
-            "arjun": entry.get("arjun", "")
+        ts         = entry.get("timestamp", "")
+        session_id = entry.get("session_id") or ("date:" + (ts[:10] if ts else "unknown"))
+        if session_id not in groups:
+            groups[session_id] = {
+                "session_id": session_id,
+                "label"     : _session_label(ts),
+                "date"      : ts[:10] if ts else "Unknown",
+                "messages"  : []
+            }
+        groups[session_id]["messages"].append({
+            "user"     : entry.get("user", ""),
+            "arjun"    : entry.get("arjun", ""),
+            "timestamp": ts
         })
-    return [{"date": d, "messages": msgs} for d, msgs in groups.items()]
+    return list(groups.values())
+
+
+def _session_label(ts: str) -> str:
+    """Convert ISO timestamp to human-readable session label."""
+    try:
+        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        return dt.strftime("%b %d, %Y · %I:%M %p").lstrip("0")
+    except Exception:
+        return ts[:16] if ts else "Unknown"
+
+
+# Keep _group_by_date as alias for backward compat with profile page
+def _group_by_date(history):
+    return _group_by_session(history)
 
 
 @app.route('/privacy')
