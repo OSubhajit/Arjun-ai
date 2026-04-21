@@ -1,23 +1,7 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="csrf-token" content="{{ csrf_token }}">
-  <script>
-    (function(){
-      var _orig = window.fetch;
-      window.fetch = function(url, opts) {
-        opts = opts || {};
-        var method = (opts.method || "GET").toUpperCase();
-        if (method !== "GET" && method !== "HEAD") {
-          var token = document.querySelector("meta[name=csrf-token]");
-          if (token) { opts.headers = Object.assign({}, opts.headers || {}, {"X-CSRF-Token": token.content}); }
-        }
-        return _orig.call(this, url, opts);
-      };
-    })();
-  </script>
-
   <meta name="csrf-token" content="{{ csrf_token }}">
   <script>
     (function(){
@@ -37,7 +21,7 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="google-adsense-account" content="ca-pub-7813661458323342">
-  <title>Profile â€” GitaPath</title>
+  <title>Profile — GitaPath</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/static/style.css"/>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
@@ -49,7 +33,7 @@
   <!-- Header -->
   <header class="profile-header">
     <div class="brand">
-      <div class="logo-mark">ðŸª·</div>
+      <div class="logo-mark">🪷</div>
       <div class="brand-name">Gita<span>Path</span></div>
     </div>
     <a href="/chat" class="back-link">
@@ -68,22 +52,22 @@
 
       <div class="profile-card">
         <div class="profile-big-avatar" id="profile-avatar">S</div>
-        <div class="profile-user-name" id="profile-name">Loadingâ€¦</div>
-        <div class="profile-user-email" id="profile-email">â€”</div>
+        <div class="profile-user-name" id="profile-name">Loading…</div>
+        <div class="profile-user-email" id="profile-email">—</div>
         <div class="profile-stats">
           <div class="stat-box">
-            <div class="stat-value" id="stat-messages">â€”</div>
+            <div class="stat-value" id="stat-messages">—</div>
             <div class="stat-label">Messages</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value" id="stat-sessions">â€”</div>
+            <div class="stat-value" id="stat-sessions">—</div>
             <div class="stat-label">Sessions</div>
           </div>
         </div>
       </div>
 
       <div class="profile-card" style="text-align:left; padding:20px 22px;">
-        <div class="section-label" style="padding-top:0;">âš™ï¸ Account</div>
+        <div class="section-label" style="padding-top:0;">⚙️ Account</div>
         <a href="/forgot" style="display:flex;align-items:center;gap:10px;padding:10px 0;color:var(--muted);font-size:0.85rem;border-bottom:1px solid var(--border);transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           Change Password
@@ -105,7 +89,7 @@
       <div class="profile-card" style="padding:20px 22px;">
         <div class="gita-quote" style="margin:0; padding:0; border:none;">
           <p>"The soul is never born nor dies at any time. It has not come into being, does not come into being, and will not come into being."</p>
-          <cite>â€” Bhagavad Gita 2.20</cite>
+          <cite>— Bhagavad Gita 2.20</cite>
         </div>
       </div>
 
@@ -116,10 +100,10 @@
       <div class="profile-conv-panel">
         <div class="panel-header">
           <div class="panel-title">Conversation History</div>
-          <div class="panel-count" id="conv-total">Loadingâ€¦</div>
+          <div class="panel-count" id="conv-total">Loading…</div>
         </div>
         <div class="conv-list" id="profile-conv-list">
-          <div style="text-align:center; padding:40px; color:var(--muted); font-size:0.85rem;">Loading your conversationsâ€¦</div>
+          <div style="text-align:center; padding:40px; color:var(--muted); font-size:0.85rem;">Loading your conversations…</div>
         </div>
       </div>
     </div>
@@ -158,14 +142,14 @@
         const preview = conv.messages[0]?.user?.substring(0, 60) || 'Conversation';
         item.innerHTML = `
           <div class="profile-conv-header" onclick="toggleConv(this.parentElement)">
-            <div class="conv-icon">ðŸ“œ</div>
+            <div class="conv-icon">📜</div>
             <div class="conv-info">
               <div class="conv-title">${conv.label || conv.date}</div>
-              <div class="conv-subtitle">${preview}â€¦</div>
+              <div class="conv-subtitle">${preview}…</div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
               <span style="font-size:0.72rem;color:var(--muted);background:var(--input-bg);border:1px solid var(--border);border-radius:10px;padding:1px 8px;">${conv.messages.length} msgs</span>
-              <span class="conv-expand">â–¼</span>
+              <span class="conv-expand">▼</span>
             </div>
           </div>
           <div class="conv-messages" id="conv-msgs-${idx}"></div>`;
@@ -179,8 +163,8 @@
               <div class="mini-bubble">${escapeHtml(m.user)}</div>
             </div>
             <div class="mini-msg arjun">
-              <div class="mini-avatar arjun">ðŸ¹</div>
-              <div class="mini-bubble">${escapeHtml(m.arjun.substring(0, 200))}${m.arjun.length > 200 ? 'â€¦' : ''}</div>
+              <div class="mini-avatar arjun">🏹</div>
+              <div class="mini-bubble">${escapeHtml(m.arjun.substring(0, 200))}${m.arjun.length > 200 ? '…' : ''}</div>
             </div>`;
         });
 
@@ -202,7 +186,7 @@
 
   loadProfile();
 
-  // FIX 03 â€” POST logout
+  // FIX 03 — POST logout
   async function doLogout() {
     try { await fetch('/logout', { method: 'POST' }); } catch(e) {}
     window.location.href = '/';

@@ -1,285 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    (function(){
+      var _orig = window.fetch;
+      window.fetch = function(url, opts) {
+        opts = opts || {};
+        var method = (opts.method || "GET").toUpperCase();
+        if (method !== "GET" && method !== "HEAD") {
+          var token = document.querySelector("meta[name=csrf-token]");
+          if (token) {
+            opts.headers = Object.assign({}, opts.headers || {}, {"X-CSRF-Token": token.content});
+          }
+        }
+        return _orig.call(this, url, opts);
+      };
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="google-adsense-account" content="ca-pub-7813661458323342">
   <title>GitaPath — Enter the Sacred Knowledge</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0806; --panel: #110f0a; --border: #2e2616;
-      --accent: #c8a96e; --accent-dim: rgba(200,169,110,0.15);
-      --accent2: #8b6914; --text: #e8e0cc; --muted: #7a6f58;
-      --error: #e07070; --success: #7ab88a;
-      --input-bg: #17130b; --radius: 12px; --saffron: #ff9933;
-    }
-    body {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-color: var(--bg);
-      font-family: 'DM Sans', sans-serif;
-      color: var(--text);
-      overflow: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background:
-        radial-gradient(ellipse 60% 50% at 20% 10%, rgba(200,169,110,0.1) 0%, transparent 70%),
-        radial-gradient(ellipse 50% 60% at 85% 90%, rgba(255,100,20,0.07) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    .lotus-bg { position: fixed; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
-    .petal { position: absolute; width: 200px; height: 200px; border-radius: 50% 0; opacity: 0.03; background: var(--saffron); animation: floatPetal 20s infinite linear; }
-    .petal:nth-child(1) { top: -50px; left: 10%; animation-delay: 0s; }
-    .petal:nth-child(2) { top: -50px; left: 60%; animation-delay: 7s; width: 150px; height: 150px; }
-    .petal:nth-child(3) { top: -50px; left: 35%; animation-delay: 14s; width: 250px; height: 250px; }
-    @keyframes floatPetal {
-      0% { transform: translateY(-100px) rotate(45deg); opacity: 0; }
-      10% { opacity: 0.04; }
-      90% { opacity: 0.04; }
-      100% { transform: translateY(110vh) rotate(225deg); opacity: 0; }
-    }
-    .container { position: relative; z-index: 1; width: 100%; max-width: 460px; padding: 16px; animation: fadeUp 0.7s ease both; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 48px 44px 44px;
-      box-shadow: 0 0 0 1px rgba(200,169,110,0.05) inset, 0 32px 80px rgba(0,0,0,0.8);
-    }
-    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
-    .logo-mark { width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #c8a96e, #8b6914); display: grid; place-items: center; flex-shrink: 0; font-size: 24px; box-shadow: 0 4px 20px rgba(200,169,110,0.3); }
-    .brand-text { display: flex; flex-direction: column; }
-    .brand-name { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); line-height: 1; }
-    .brand-name span { color: var(--accent); }
-    .brand-sub { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 3px; }
-    .sanskrit-bar { text-align: center; font-family: 'Noto Serif Devanagari', serif; font-size: 0.75rem; color: var(--accent); opacity: 0.6; letter-spacing: 0.05em; margin-bottom: 24px; }
-    .heading { margin-bottom: 28px; }
-    .heading h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1.2; color: var(--text); }
-    .heading p { margin-top: 8px; font-size: 0.88rem; color: var(--muted); font-weight: 300; }
-    .alert { display: none; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--radius); font-size: 0.85rem; margin-bottom: 20px; }
-    .alert.error { display: flex; background: rgba(224,112,112,0.12); border: 1px solid rgba(224,112,112,0.25); color: var(--error); }
-    .alert.success { display: flex; background: rgba(122,184,138,0.12); border: 1px solid rgba(122,184,138,0.25); color: var(--success); }
-    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 28px; }
-    .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; margin-bottom: -1px; }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .form-panel { display: none; animation: fadeUp 0.4s ease both; }
-    .form-panel.active { display: block; }
-    .field { margin-bottom: 16px; }
-    .field label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--muted); margin-bottom: 7px; letter-spacing: 0.03em; text-transform: uppercase; }
-    .input-wrap { position: relative; }
-    .input-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
-    .input-wrap input { width: 100%; height: 48px; padding: 0 44px 0 42px; background: var(--input-bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .input-wrap input::placeholder { color: #3a3020; }
-    .input-wrap input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(200,169,110,0.15); }
-    .input-wrap input.error { border-color: var(--error); }
-    .field-error { display: none; font-size: 0.76rem; color: var(--error); margin-top: 5px; }
-    .field-error.visible { display: block; }
-    .toggle-pw { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; }
-    .toggle-pw svg { width: 17px; height: 17px; }
-    .options-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-    .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--muted); cursor: pointer; user-select: none; }
-    .checkbox-label input { display: none; }
-    .custom-check { width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 5px; background: var(--input-bg); display: grid; place-items: center; flex-shrink: 0; transition: all 0.2s; }
-    .custom-check svg { width: 10px; height: 10px; stroke: var(--bg); stroke-width: 2.5; display: none; }
-    .checkbox-label input:checked ~ .custom-check { background: var(--accent); border-color: var(--accent); }
-    .checkbox-label input:checked ~ .custom-check svg { display: block; }
-    .forgot-link { font-size: 0.83rem; color: var(--accent); text-decoration: none; opacity: 0.8; transition: opacity 0.2s; }
-    .forgot-link:hover { opacity: 1; }
-    .btn-submit { width: 100%; height: 50px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: var(--radius); color: #0a0806; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s, transform 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px rgba(200,169,110,0.25); }
-    .btn-submit:hover:not(:disabled) { opacity: 0.92; transform: translateY(-1px); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-    .spinner { display: none; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .btn-submit.loading .btn-text { display: none; }
-    .btn-submit.loading .spinner { display: flex; align-items: center; }
-    .btn-submit.loading .spinner svg { width: 20px; height: 20px; }
-    .btn-outline { width: 100%; height: 44px; background: transparent; border: 1px solid rgba(200,169,110,0.3); border-radius: var(--radius); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 0.88rem; cursor: pointer; margin-top: 10px; transition: all 0.2s; }
-    .btn-outline:hover { background: rgba(200,169,110,0.08); }
-
-    /* OTP step — hidden by default */
-    .otp-step { display: none; }
-    .otp-step.visible { display: block; animation: fadeUp 0.4s ease both; }
-    .otp-info { background: rgba(200,169,110,0.06); border: 1px solid rgba(200,169,110,0.15); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.83rem; color: var(--muted); text-align: center; }
-    .otp-info strong { color: var(--accent); }
-    .resend-row { text-align: center; margin-top: 10px; font-size: 0.8rem; color: var(--muted); }
-    .resend-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.8rem; padding: 2px 6px; }
-
-    .gita-quote { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; }
-    .gita-quote p { font-size: 0.78rem; color: var(--muted); font-style: italic; line-height: 1.6; }
-    .gita-quote cite { display: block; margin-top: 5px; font-size: 0.72rem; color: var(--accent); opacity: 0.7; font-style: normal; }
-
-    @media (max-width: 480px) {
-      .card { padding: 36px 24px 30px; }
-      .heading h1 { font-size: 1.5rem; }
-    }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
 </head>
 <body>
 
-<div class="lotus-bg">
-  <div class="petal"></div>
-  <div class="petal"></div>
-  <div class="petal"></div>
-</div>
+<div class="auth-bg">
+  <div class="lotus-bg">
+    <div class="petal"></div>
+    <div class="petal"></div>
+    <div class="petal"></div>
+  </div>
 
-<div class="container">
-  <div class="card">
+  <div class="auth-container">
+    <div class="auth-card">
 
-    <div class="brand">
-      <div class="logo-mark">🪷</div>
-      <div class="brand-text">
-        <div class="brand-name">Gita<span>Path</span></div>
-        <div class="brand-sub">Wisdom of the Bhagavad Gita</div>
-      </div>
-    </div>
-
-    <div class="sanskrit-bar">कर्मण्येवाधिकारस्ते मा फलेषु कदाचन</div>
-
-    <div class="heading">
-      <h1>Begin your journey</h1>
-      <p>Enter the realm of timeless wisdom with Arjun as your guide</p>
-    </div>
-
-    <div class="alert" id="alert" role="alert">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <span id="alert-msg"></span>
-    </div>
-
-    <div class="tabs">
-      <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
-      <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Create Account</button>
-    </div>
-
-    <!-- ── LOGIN PANEL ── -->
-    <div class="form-panel active" id="panel-login">
-      <div class="field">
-        <label for="login-email">Email address</label>
-        <div class="input-wrap">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
-          </svg>
-          <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email" />
+      <div class="brand" style="margin-bottom:28px;">
+        <div class="logo-mark">🪷</div>
+        <div>
+          <div class="brand-name">Gita<span>Path</span></div>
+          <div class="brand-sub">Wisdom of the Bhagavad Gita</div>
         </div>
-        <div class="field-error" id="login-email-error">Please enter a valid email address.</div>
       </div>
-      <div class="field">
-        <label for="login-password">Password</label>
-        <div class="input-wrap">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-          <input type="password" id="login-password" placeholder="Your password" autocomplete="current-password" />
-          <button type="button" class="toggle-pw" onclick="togglePw('login-password')">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </div>
-        <div class="field-error" id="login-pw-error">Password must be at least 8 characters.</div>
-      </div>
-      <div class="options-row">
-        <label class="checkbox-label">
-          <input type="checkbox" id="rememberMe"/>
-          <span class="custom-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span>
-          Remember me
-        </label>
-        <a href="/forgot" class="forgot-link">Forgot Password?</a>
-      </div>
-      <button class="btn-submit" id="loginBtn" onclick="doLogin()">
-        <span class="btn-text">Enter the Path ✦</span>
-        <span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 0-10 10"/></svg></span>
-      </button>
-    </div>
 
-    <!-- ── REGISTER PANEL ── -->
-    <div class="form-panel" id="panel-register">
+      <div class="sanskrit-bar">कर्मण्येवाधिकारस्ते मा फलेषु कदाचन</div>
 
-      <!-- STEP 1: Details -->
-      <div id="reg-step1">
+      <div class="auth-heading">
+        <h1>Begin your journey</h1>
+        <p>Enter the realm of timeless wisdom with Arjun as your guide</p>
+      </div>
+
+      <div class="alert" id="alert" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="alert-msg"></span>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+        <button class="tab-btn" id="tab-register" onclick="switchTab('register')">Create Account</button>
+      </div>
+
+      <!-- ── LOGIN PANEL ── -->
+      <div class="form-panel active" id="panel-login">
         <div class="field">
-          <label for="reg-name">Your Name</label>
-          <div class="input-wrap">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
-            <input type="text" id="reg-name" placeholder="O Seeker, what is your name?" />
-          </div>
-          <div class="field-error" id="reg-name-error">Please enter your name.</div>
-        </div>
-        <div class="field">
-          <label for="reg-email">Email address</label>
+          <label for="login-email">Email address</label>
           <div class="input-wrap">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
             </svg>
-            <input type="email" id="reg-email" placeholder="you@example.com" />
+            <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
           </div>
-          <div class="field-error" id="reg-email-error">Please enter a valid email address.</div>
+          <div class="field-error" id="login-email-error">Please enter a valid email address.</div>
         </div>
         <div class="field">
-          <label for="reg-password">Create Password</label>
+          <label for="login-password">Password</label>
           <div class="input-wrap">
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
             </svg>
-            <input type="password" id="reg-password" placeholder="Min. 8 characters" />
-            <button type="button" class="toggle-pw" onclick="togglePw('reg-password')">
+            <input type="password" id="login-password" placeholder="Your password" autocomplete="current-password"/>
+            <button type="button" class="toggle-pw" onclick="togglePw('login-password')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
           </div>
-          <div class="field-error" id="reg-pw-error">Password must be at least 8 characters.</div>
+          <div class="field-error" id="login-pw-error">Password must be at least 8 characters.</div>
         </div>
-        <button class="btn-submit" id="sendOtpBtn" onclick="doSendOTP()">
-          <span class="btn-text">Send OTP to Email ✦</span>
+        <div class="options-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="rememberMe"/>
+            <span class="custom-check"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></span>
+            Remember me
+          </label>
+          <a href="/forgot" class="forgot-link">Forgot Password?</a>
+        </div>
+        <button class="btn btn-primary" id="loginBtn" onclick="doLogin()">
+          <span class="btn-text">Enter the Path ✦</span>
           <span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 0-10 10"/></svg></span>
         </button>
       </div>
 
-      <!-- STEP 2: OTP -->
-      <div class="otp-step" id="reg-step2">
-        <div class="otp-info">
-          OTP sent to <strong id="reg-email-display"></strong><br>
-          Check your inbox and spam folder
+      <!-- ── REGISTER PANEL ── -->
+      <div class="form-panel" id="panel-register">
+        <div id="reg-step1">
+          <div class="field">
+            <label for="reg-name">Your Name</label>
+            <div class="input-wrap">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+              <input type="text" id="reg-name" placeholder="O Seeker, what is your name?"/>
+            </div>
+            <div class="field-error" id="reg-name-error">Please enter your name.</div>
+          </div>
+          <div class="field">
+            <label for="reg-email">Email address</label>
+            <div class="input-wrap">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+              </svg>
+              <input type="email" id="reg-email" placeholder="you@example.com"/>
+            </div>
+            <div class="field-error" id="reg-email-error">Please enter a valid email address.</div>
+          </div>
+          <div class="field">
+            <label for="reg-password">Create Password</label>
+            <div class="input-wrap">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <input type="password" id="reg-password" placeholder="Min. 8 characters"/>
+              <button type="button" class="toggle-pw" onclick="togglePw('reg-password')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+            <div class="field-error" id="reg-pw-error">Password must be at least 8 characters.</div>
+          </div>
+          <button class="btn btn-primary" id="sendOtpBtn" onclick="doSendOTP()">
+            <span class="btn-text">Send OTP to Email ✦</span>
+            <span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 0-10 10"/></svg></span>
+          </button>
         </div>
-        <div class="field">
-          <label for="reg-otp">Enter OTP</label>
-          <div class="input-wrap">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            <input type="number" id="reg-otp" placeholder="6-digit OTP" />
+
+        <div class="otp-step" id="reg-step2">
+          <div class="otp-info">
+            OTP sent to <strong id="reg-email-display"></strong><br>
+            Check your inbox and spam folder
+          </div>
+          <div class="field">
+            <label for="reg-otp">Enter OTP</label>
+            <div class="input-wrap">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <input type="number" id="reg-otp" placeholder="6-digit OTP"/>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="verifyBtn" onclick="doVerifyOTP()">
+            <span class="btn-text">Verify & Create Account ✦</span>
+            <span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 0-10 10"/></svg></span>
+          </button>
+          <button class="btn btn-ghost" style="margin-top:10px;" onclick="goBackToStep1()">← Change Details</button>
+          <div class="resend-row">
+            Didn't receive OTP?
+            <button class="resend-btn" onclick="doSendOTP(true)">Resend</button>
           </div>
         </div>
-        <button class="btn-submit" id="verifyBtn" onclick="doVerifyOTP()">
-          <span class="btn-text">Verify & Create Account ✦</span>
-          <span class="spinner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 2a10 10 0 0 1 10 10" stroke-opacity="0.3"/><path d="M12 2a10 10 0 0 0-10 10"/></svg></span>
-        </button>
-        <button class="btn-outline" onclick="goBackToStep1()">← Change Details</button>
-        <div class="resend-row">
-          Didn't receive OTP?
-          <button class="resend-btn" onclick="doSendOTP(true)">Resend</button>
-        </div>
+      </div>
+
+      <div class="gita-quote">
+        <p>"You have the right to perform your actions, but you are not entitled to the fruits of the actions."</p>
+        <cite>— Bhagavad Gita 2.47</cite>
       </div>
 
     </div>
-
-    <div class="gita-quote">
-      <p>"You have the right to perform your actions, but you are not entitled to the fruits of the actions."</p>
-      <cite>— Bhagavad Gita 2.47</cite>
-    </div>
-
   </div>
 </div>
 
@@ -291,183 +193,95 @@
     document.getElementById('panel-' + tab).classList.add('active');
     clearAlert();
   }
-
   function showAlert(type, msg) {
     const el = document.getElementById('alert');
-    el.className = 'alert ' + type;
+    el.className = 'alert show-' + type;
     document.getElementById('alert-msg').textContent = msg;
   }
-
-  function clearAlert() {
-    document.getElementById('alert').className = 'alert';
-  }
-
-  function validateEmail(v) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
-  }
-
+  function clearAlert() { document.getElementById('alert').className = 'alert'; }
+  function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
   function setLoading(btnId, loading) {
     const btn = document.getElementById(btnId);
     btn.classList.toggle('loading', loading);
     btn.disabled = loading;
   }
-
-  function togglePw(inputId) {
-    const input = document.getElementById(inputId);
-    input.type = input.type === 'password' ? 'text' : 'password';
+  function togglePw(id) {
+    const el = document.getElementById(id);
+    el.type = el.type === 'password' ? 'text' : 'password';
   }
-
   function goBackToStep1() {
     document.getElementById('reg-step1').style.display = 'block';
     document.getElementById('reg-step2').classList.remove('visible');
     clearAlert();
   }
-
-  // ── SEND OTP ──
   async function doSendOTP(isResend = false) {
     clearAlert();
     const name     = document.getElementById('reg-name').value.trim();
     const email    = document.getElementById('reg-email').value.trim();
     const password = document.getElementById('reg-password').value;
-
-    // Validate only on first send, not resend
     if (!isResend) {
       let valid = true;
-      if (!name) {
-        document.getElementById('reg-name-error').classList.add('visible');
-        valid = false;
-      } else {
-        document.getElementById('reg-name-error').classList.remove('visible');
-      }
-      if (!validateEmail(email)) {
-        document.getElementById('reg-email-error').classList.add('visible');
-        valid = false;
-      } else {
-        document.getElementById('reg-email-error').classList.remove('visible');
-      }
-      if (password.length < 8) {
-        document.getElementById('reg-pw-error').classList.add('visible');
-        valid = false;
-      } else {
-        document.getElementById('reg-pw-error').classList.remove('visible');
-      }
+      if (!name)                { document.getElementById('reg-name-error').classList.add('show'); valid = false; }
+      else                      { document.getElementById('reg-name-error').classList.remove('show'); }
+      if (!validateEmail(email)){ document.getElementById('reg-email-error').classList.add('show'); valid = false; }
+      else                      { document.getElementById('reg-email-error').classList.remove('show'); }
+      if (password.length < 8)  { document.getElementById('reg-pw-error').classList.add('show'); valid = false; }
+      else                      { document.getElementById('reg-pw-error').classList.remove('show'); }
       if (!valid) return;
     }
-
     setLoading('sendOtpBtn', true);
-
     try {
-      const res = await fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: "send_otp", name, email, password })
-      });
+      const res  = await fetch('/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:"send_otp", name, email, password }) });
       const data = await res.json();
-
       if (data.success) {
-        // Show OTP step
         document.getElementById('reg-step1').style.display = 'none';
         document.getElementById('reg-step2').classList.add('visible');
         document.getElementById('reg-email-display').textContent = email;
         showAlert('success', isResend ? 'New OTP sent!' : 'OTP sent! Check your email.');
-      } else {
-        showAlert('error', data.message || 'Failed to send OTP');
-      }
-    } catch(e) {
-      showAlert('error', 'Connection failed. Please try again.');
-    }
-
+      } else { showAlert('error', data.message || 'Failed to send OTP'); }
+    } catch(e) { showAlert('error', 'Connection failed. Please try again.'); }
     setLoading('sendOtpBtn', false);
   }
-
-  // ── VERIFY OTP ──
   async function doVerifyOTP() {
     clearAlert();
     const email = document.getElementById('reg-email').value.trim();
     const otp   = document.getElementById('reg-otp').value.trim();
-
-    if (!otp || otp.length !== 6) {
-      showAlert('error', 'Please enter the 6-digit OTP');
-      return;
-    }
-
+    if (!otp || otp.length !== 6) { showAlert('error', 'Please enter the 6-digit OTP'); return; }
     setLoading('verifyBtn', true);
-
     try {
-      const res = await fetch('/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: "verify_otp", email, otp })
-      });
+      const res  = await fetch('/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ action:"verify_otp", email, otp }) });
       const data = await res.json();
-
       if (data.success) {
         showAlert('success', 'Account created! Entering the path...');
         setTimeout(() => window.location.href = data.redirect || '/chat', 1200);
-      } else {
-        showAlert('error', data.message || 'Invalid OTP. Try again.');
-        setLoading('verifyBtn', false);
-      }
-    } catch(e) {
-      showAlert('error', 'Connection failed. Please try again.');
-      setLoading('verifyBtn', false);
-    }
+      } else { showAlert('error', data.message || 'Invalid OTP. Try again.'); setLoading('verifyBtn', false); }
+    } catch(e) { showAlert('error', 'Connection failed. Please try again.'); setLoading('verifyBtn', false); }
   }
-
-  // ── LOGIN ──
   async function doLogin() {
     clearAlert();
     const email    = document.getElementById('login-email').value.trim();
     const password = document.getElementById('login-password').value;
     let valid = true;
-
-    if (!validateEmail(email)) {
-      document.getElementById('login-email').classList.add('error');
-      document.getElementById('login-email-error').classList.add('visible');
-      valid = false;
-    } else {
-      document.getElementById('login-email').classList.remove('error');
-      document.getElementById('login-email-error').classList.remove('visible');
-    }
-    if (password.length < 8) {
-      document.getElementById('login-password').classList.add('error');
-      document.getElementById('login-pw-error').classList.add('visible');
-      valid = false;
-    } else {
-      document.getElementById('login-password').classList.remove('error');
-      document.getElementById('login-pw-error').classList.remove('visible');
-    }
+    if (!validateEmail(email)) { document.getElementById('login-email').classList.add('err'); document.getElementById('login-email-error').classList.add('show'); valid = false; }
+    else                       { document.getElementById('login-email').classList.remove('err'); document.getElementById('login-email-error').classList.remove('show'); }
+    if (password.length < 8)   { document.getElementById('login-password').classList.add('err'); document.getElementById('login-pw-error').classList.add('show'); valid = false; }
+    else                       { document.getElementById('login-password').classList.remove('err'); document.getElementById('login-pw-error').classList.remove('show'); }
     if (!valid) return;
-
     setLoading('loginBtn', true);
     try {
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const res  = await fetch('/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email, password, rememberMe: document.getElementById('rememberMe').checked }) });
       const data = await res.json();
-      if (data.success) {
-        showAlert('success', 'Welcome back! Entering the path...');
-        setTimeout(() => window.location.href = data.redirect, 1000);
-      } else {
-        showAlert('error', data.message || 'Invalid credentials');
-      }
-    } catch(e) {
-      showAlert('error', 'Connection failed. Please try again.');
-    }
+      if (data.success) { showAlert('success', 'Welcome back! Entering the path...'); setTimeout(() => window.location.href = data.redirect, 1000); }
+      else { showAlert('error', data.message || 'Invalid credentials'); }
+    } catch(e) { showAlert('error', 'Connection failed. Please try again.'); }
     setLoading('loginBtn', false);
   }
-
-  // ── ENTER KEY ──
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
-    const activePanel = document.querySelector('.form-panel.active').id;
-    if (activePanel === 'panel-login') {
-      doLogin();
-    } else {
-      const otpVisible = document.getElementById('reg-step2').classList.contains('visible');
-      if (otpVisible) doVerifyOTP();
+    const active = document.querySelector('.form-panel.active').id;
+    if (active === 'panel-login') doLogin();
+    else {
+      if (document.getElementById('reg-step2').classList.contains('visible')) doVerifyOTP();
       else doSendOTP();
     }
   });

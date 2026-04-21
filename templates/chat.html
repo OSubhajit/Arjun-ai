@@ -1,551 +1,746 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="google-adsense-account" content="ca-pub-7813661458323342">
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <script>
+    (function(){
+      var _orig = window.fetch;
+      window.fetch = function(url, opts) {
+        opts = opts || {};
+        var method = (opts.method || "GET").toUpperCase();
+        if (method !== "GET" && method !== "HEAD") {
+          var token = document.querySelector("meta[name=csrf-token]");
+          if (token) {
+            opts.headers = Object.assign({}, opts.headers || {}, {"X-CSRF-Token": token.content});
+          }
+        }
+        return _orig.call(this, url, opts);
+      };
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="google-adsense-account" content="ca-pub-7813661458323342">
   <title>GitaPath — Speak with Arjun</title>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0806; --sidebar-bg: #0e0c09; --panel: #110f0a;
-      --border: #2e2616; --accent: #c8a96e; --accent-dim: rgba(200,169,110,0.12);
-      --text: #e8e0cc; --muted: #7a6f58; --input-bg: #17130b;
-      --user-bubble: #1e190f; --arjun-bubble: #130e0a;
-      --radius: 14px; --saffron: #ff9933; --sidebar-w: 280px;
-    }
-    body { background: var(--bg); font-family: 'DM Sans', sans-serif; color: var(--text); height: 100vh; display: flex; overflow: hidden; }
-
-
-    @media (max-width: 768px) {
-  body {
-    overflow: auto;
-  }
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/style.css"/>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+#bg-canvas {
+  position: fixed; top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0; pointer-events: none;
 }
-
-    /* ── SIDEBAR ── */
-    .sidebar { width: var(--sidebar-w); background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; position: relative; z-index: 10; }
-    .sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
-    .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-    .logo-mark { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #c8a96e, #8b6914); display: grid; place-items: center; font-size: 20px; flex-shrink: 0; }
-    .brand-name { font-family: 'Playfair Display', serif; font-size: 1.2rem; font-weight: 700; color: var(--text); }
-    .brand-name span { color: var(--accent); }
-    .new-chat-btn { width: 100%; padding: 10px 14px; background: var(--accent-dim); border: 1px solid rgba(200,169,110,0.25); border-radius: 10px; color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
-    .new-chat-btn:hover { background: rgba(200,169,110,0.2); }
-
-    /* ── ARJUN CARD ── */
-    .arjun-card { margin: 16px; padding: 16px; background: linear-gradient(135deg, rgba(200,169,110,0.08), rgba(139,105,20,0.05)); border: 1px solid rgba(200,169,110,0.15); border-radius: 14px; }
-    .arjun-avatar { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #2a1f08, #1a1205); border: 2px solid rgba(200,169,110,0.4); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 10px; box-shadow: 0 0 20px rgba(200,169,110,0.2); position: relative; }
-    .arjun-avatar::after { content: ''; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid rgba(200,169,110,0.2); animation: pulse 3s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05); } }
-    .arjun-name { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 600; color: var(--accent); text-align: center; }
-    .arjun-title { font-size: 0.72rem; color: var(--muted); text-align: center; margin-top: 3px; letter-spacing: 0.05em; }
-    .arjun-status { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 8px; font-size: 0.73rem; color: #7ab88a; }
-    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #7ab88a; animation: blink 2s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-    /* MOBILE FIX */
-@media (max-width: 768px) {
-  .sidebar {
-    position: fixed;
-    left: -100%;
-    top: 0;
-    height: 100%;
-    width: 240px;
-    transition: 0.3s;
-  }
-
-  .sidebar.active {
-    left: 0;
-  }
-
-  body {
-    overflow: auto;
-  }
+body {
+  height: 100vh; display: flex; overflow: hidden;
+  background: #06030f; position: relative;
 }
-    
-    /* ── SIDEBAR STORY ── */
-    .story-section { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
-    .story-section::-webkit-scrollbar { width: 4px; }
-    .story-section::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-    .section-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 0 8px; }
-    .story-text { font-size: 0.77rem; color: var(--muted); line-height: 1.7; }
-
-    /* ── SIDEBAR FOOTER ── */
-    .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .user-info { display: flex; align-items: center; gap: 10px; }
-    .user-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #c8a96e, #8b6914); display: grid; place-items: center; font-size: 16px; font-weight: 600; color: #0a0806; }
-    .user-name { font-size: 0.85rem; font-weight: 500; }
-    .logout-btn { background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s; }
-    .logout-btn:hover { color: var(--text); background: var(--border); }
-    .logout-btn svg { width: 16px; height: 16px; }
-
-    /* ── MAIN ── */
-  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; width: 100%; }
-    .main::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 50% 40% at 70% 20%, rgba(200,169,110,0.04) 0%, transparent 70%), radial-gradient(ellipse 40% 50% at 20% 80%, rgba(255,100,20,0.03) 0%, transparent 70%); pointer-events: none; }
-
-    /* ── CHAT HEADER ── */
-    .chat-header { padding: 18px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
-    .chat-header-avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2a1f08, #1a1205); border: 2px solid rgba(200,169,110,0.35); display: flex; align-items: center; justify-content: center; font-size: 22px; }
-    .chat-header-info { flex: 1; }
-    .chat-header-name { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 600; color: var(--accent); }
-    .chat-header-sub { font-size: 0.76rem; color: var(--muted); }
-    .header-actions { display: flex; align-items: center; gap: 8px; }
-    .voice-toggle { background: var(--accent-dim); border: 1px solid rgba(200,169,110,0.25); color: var(--accent); border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
-    .voice-toggle.muted { background: rgba(224,112,112,0.1); border-color: rgba(224,112,112,0.3); color: #e07070; }
-    .help-link { font-size: 0.75rem; color: var(--muted); text-decoration: none; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); transition: all 0.2s; }
-    .help-link:hover { color: var(--accent); border-color: rgba(200,169,110,0.3); }
-
-    /* ── MESSAGES ── */
-    .messages-wrap { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; position: relative; z-index: 1; }
-    .messages-wrap::-webkit-scrollbar { width: 5px; }
-    .messages-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-    /* ── INTRO ── */
-    .intro-msg { max-width: 680px; margin: 0 auto; text-align: center; animation: fadeUp 0.8s ease both; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-    .intro-lotus { font-size: 52px; margin-bottom: 14px; filter: drop-shadow(0 0 24px rgba(200,169,110,0.5)); }
-    .intro-msg h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--accent); margin-bottom: 10px; }
-    .intro-msg p { font-size: 0.9rem; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
-    .intro-sanskrit { font-family: 'Noto Serif Devanagari', serif; font-size: 0.95rem; color: rgba(200,169,110,0.6); margin: 16px 0; padding: 12px 20px; border: 1px solid rgba(200,169,110,0.15); border-radius: 10px; background: rgba(200,169,110,0.04); display: inline-block; }
-    .intro-translation { font-size: 0.78rem; color: var(--muted); font-style: italic; margin-bottom: 24px; }
-    .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-    .suggestion-chip { padding: 8px 14px; background: var(--arjun-bubble); border: 1px solid var(--border); border-radius: 20px; font-size: 0.82rem; color: var(--muted); cursor: pointer; transition: all 0.2s; }
-    .suggestion-chip:hover { background: var(--accent-dim); border-color: rgba(200,169,110,0.3); color: var(--accent); }
-
-    /* ── MESSAGE BUBBLES ── */
-    .message { display: flex; gap: 12px; animation: fadeUp 0.4s ease both; max-width: 780px; width: 100%; }
-    
-    @media (max-width: 768px) {
-  .message {
-    max-width: 100%;
-  }
+@media (max-width: 768px) { body { overflow: auto; } }
+.sidebar {
+  background: rgba(8,4,20,0.88) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-right: 1px solid rgba(212,160,23,0.18) !important;
+  z-index: 10; position: relative;
 }
-    .message.user { flex-direction: row-reverse; margin-left: auto; }
-    .msg-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .msg-avatar.arjun { background: linear-gradient(135deg, #2a1f08, #1a1205); border: 1px solid rgba(200,169,110,0.3); }
-    .msg-avatar.user { background: linear-gradient(135deg, #c8a96e, #8b6914); font-size: 14px; font-weight: 600; color: #0a0806; }
-    .msg-content { flex: 1; }
-    .msg-bubble { padding: 14px 18px; border-radius: 16px; font-size: 0.9rem; line-height: 1.8; }
-    .message.arjun .msg-bubble { background: var(--arjun-bubble); border: 1px solid var(--border); border-top-left-radius: 4px; }
-    .message.user .msg-bubble { background: var(--user-bubble); border: 1px solid rgba(200,169,110,0.15); border-top-right-radius: 4px; text-align: right; }
-    .shloka-box { background: rgba(200,169,110,0.06); border: 1px solid rgba(200,169,110,0.2); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'Noto Serif Devanagari', serif; font-size: 0.85rem; color: rgba(200,169,110,0.85); line-height: 1.8; }
-    .msg-time { font-size: 0.7rem; color: var(--muted); margin-top: 5px; padding: 0 2px; }
-    .message.user .msg-time { text-align: right; }
-
-    /* ── TYPING ── */
-    .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 14px 18px; background: var(--arjun-bubble); border: 1px solid var(--border); border-radius: 16px; border-top-left-radius: 4px; width: fit-content; }
-    .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: 0.4; animation: typingBounce 1.2s infinite; }
-    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typingBounce { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-5px); } }
-
-    /* ── INPUT ── */
-    .input-area { padding: 16px 28px 20px; border-top: 1px solid var(--border); position: relative; z-index: 1; }
-    .input-row { display: flex; gap: 10px; align-items: flex-end; background: var(--input-bg); border: 1px solid var(--border); border-radius: 16px; padding: 10px 12px 10px 18px; transition: border-color 0.2s, box-shadow 0.2s; }
-    .input-row:focus-within { border-color: rgba(200,169,110,0.4); box-shadow: 0 0 0 3px rgba(200,169,110,0.08); }
-    textarea { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.92rem; resize: none; max-height: 140px; line-height: 1.6; padding: 4px 0; }
-    textarea::placeholder { color: #3a3020; }
-    .voice-btn { background: var(--accent-dim); border: 1px solid rgba(200,169,110,0.25); color: var(--accent); border-radius: 8px; padding: 8px 10px; cursor: pointer; font-size: 16px; transition: all 0.2s; flex-shrink: 0; }
-    .voice-btn:hover { background: rgba(200,169,110,0.2); }
-    .voice-btn.listening { background: rgba(255,80,80,0.15); border-color: rgba(255,80,80,0.4); animation: pulse-red 1s infinite; }
-    @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,80,80,0.3); } 50% { box-shadow: 0 0 0 6px rgba(255,80,80,0); } }
-    .send-btn { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, #c8a96e, #8b6914); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.2s, transform 0.15s; }
-    .send-btn:hover:not(:disabled) { opacity: 0.85; transform: scale(1.05); }
-    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .send-btn svg { width: 18px; height: 18px; fill: #0a0806; }
-    .input-hint { font-size: 0.72rem; color: var(--muted); margin-top: 8px; text-align: center; }
-
-    /* ── MOBILE ── */
-    .menu-btn { display: none; background: none; border: none; color: var(--text); cursor: pointer; padding: 6px; }
-    @media (max-width: 768px) {
-      .sidebar { position: fixed; left: -100%; top: 0; bottom: 0; z-index: 100; transition: left 0.3s; width: 280px; }
-
-      .main {
-  width: 100%;
+.main {
+  background: rgba(6,3,15,0.72) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  z-index: 10; position: relative;
 }
-      
-      .sidebar.open { left: 0; }
-      .menu-btn { display: flex; align-items: center; }
-      .messages-wrap { padding: 16px; }
-      .input-area { padding: 12px 16px 16px; }
-      .chat-header { padding: 14px 16px; }
-      .help-link { display: none; }
-    }
-  </style>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342"
-     crossorigin="anonymous"></script>
+.chat-header {
+  background: rgba(8,4,20,0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-bottom: 1px solid rgba(212,160,23,0.2) !important;
+}
+.input-area {
+  background: rgba(8,4,20,0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(212,160,23,0.15) !important;
+}
+.msg-bubble {
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+.lang-wrapper { position: relative; display: inline-flex; align-items: center; }
+.lang-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  background: rgba(212,160,23,0.1);
+  border: 1px solid rgba(212,160,23,0.3);
+  border-radius: 20px; color: #d4a017;
+  cursor: pointer; font-size: 12px;
+  font-family: 'DM Sans', sans-serif; font-weight: 500;
+  transition: all 0.2s; white-space: nowrap;
+}
+.lang-btn:hover { background: rgba(212,160,23,0.2); border-color: rgba(212,160,23,0.5); }
+.lang-dropdown {
+  display: none; position: absolute; top: calc(100% + 8px); right: 0;
+  background: rgba(10,5,25,0.97); backdrop-filter: blur(20px);
+  border: 1px solid rgba(212,160,23,0.3); border-radius: 12px;
+  padding: 6px; min-width: 160px; z-index: 1000;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+}
+.lang-dropdown.open { display: block; }
+.lang-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  color: #c8b8e8; font-size: 13px;
+  font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+}
+.lang-option:hover { background: rgba(212,160,23,0.15); color: #f0d070; }
+.lang-option.active { background: rgba(212,160,23,0.2); color: #d4a017; font-weight: 600; }
+.lang-option .flag { font-size: 16px; }
+.lang-divider { height: 1px; background: rgba(212,160,23,0.12); margin: 4px 0; }
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.voice-toggle { padding: 5px 10px !important; border-radius: 20px !important; font-size: 12px !important; }
+.voice-toggle.muted { opacity: 0.5; }
+.conv-delete-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border: none; background: transparent;
+  color: transparent; border-radius: 4px; cursor: pointer;
+  flex-shrink: 0; transition: background 0.15s, color 0.15s; padding: 0;
+}
+.conv-item:hover .conv-delete-btn { color: #888; }
+.conv-delete-btn:hover { background: rgba(220,60,60,0.15) !important; color: #e05555 !important; }
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(212,160,23,0.6),0 0 0 0 rgba(212,160,23,0.3); }
+  70%  { box-shadow: 0 0 0 10px rgba(212,160,23,0),0 0 0 20px rgba(212,160,23,0); }
+  100% { box-shadow: 0 0 0 0 rgba(212,160,23,0),0 0 0 0 rgba(212,160,23,0); }
+}
+.arjun-avatar { animation: ring-pulse 3s infinite; }
+@keyframes float-up {
+  0%   { transform: translateY(0px) scale(1); opacity: 0.8; }
+  50%  { transform: translateY(-12px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+}
+.intro-lotus {
+  animation: float-up 4s ease-in-out infinite;
+  display: inline-block;
+  filter: drop-shadow(0 0 20px rgba(212,160,23,0.8));
+}
+</style>
 </head>
 <body>
+<canvas id="bg-canvas"></canvas>
 
-  <!-- ── SIDEBAR ── -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="brand">
-        <div class="logo-mark">🪷</div>
-        <div class="brand-name">Gita<span>Path</span></div>
-      </div>
-      <button class="new-chat-btn" onclick="newChat()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        New Conversation
-      </button>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="brand">
+      <div class="logo-mark">🪷</div>
+      <div class="brand-name">Gita<span>Path</span></div>
     </div>
+    <button class="new-chat-btn" onclick="newChat()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      New Conversation
+    </button>
+  </div>
+  <div class="arjun-card">
+    <div class="arjun-avatar">🏹</div>
+    <div class="arjun-name">Arjun</div>
+    <div class="arjun-title">Son of Indra · Student of Dronacharya · Disciple of Krishna</div>
+    <div class="arjun-status"><div class="status-dot"></div><span id="arjun-status-text">Awaiting your question</span></div>
+  </div>
+  <div class="story-section">
+    <div class="section-label">📜 The Mahabharata</div>
+    <div class="story-text" id="sidebar-story"></div>
+  </div>
+  <div class="conv-section" id="conv-section">
+    <div class="section-label">🗂 Conversation History</div>
+    <div id="conv-list"><div class="conv-empty">Your conversations will appear here</div></div>
+  </div>
+  <div class="sidebar-footer">
+    <a href="/profile" class="user-info" title="View profile">
+      <div class="user-avatar" id="user-initial">S</div>
+      <div class="user-name" id="user-display-name">{{ user_name }}</div>
+    </a>
+    <button class="logout-btn" title="Sign out" onclick="doLogout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
+  </div>
+</aside>
 
-    <div class="arjun-card">
-      <div class="arjun-avatar">🏹</div>
-      <div class="arjun-name">Arjun</div>
-      <div class="arjun-title">Son of Indra · Student of Dronacharya · Disciple of Krishna</div>
-      <div class="arjun-status"><div class="status-dot"></div>Awaiting your question</div>
+<main class="main">
+  <div class="chat-header">
+    <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open menu">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <div class="chat-header-avatar">🏹</div>
+    <div class="chat-header-info">
+      <div class="chat-header-name">Arjun</div>
+      <div class="chat-header-sub">Warrior of Kurukshetra · Disciple of Lord Krishna · Bhagavad Gita</div>
     </div>
-
-    <div class="story-section">
-      <div class="section-label">📜 The Mahabharata</div>
-      <div class="story-text" id="sidebar-story"></div>
-    </div>
-
-    <div class="sidebar-footer">
-      <div class="user-info">
-        <div class="user-avatar" id="user-initial">S</div>
-        <div class="user-name" id="user-display-name">{{ user_name }}</div>
-      </div>
-      <a href="/logout" class="logout-btn" title="Sign out">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16 17 21 12 16 7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-      </a>
-    </div>
-  </aside>
-
-  <!-- ── MAIN ── -->
-  <main class="main">
-    <div class="chat-header">
-      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Open menu">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="3" y1="12" x2="21" y2="12"/>
-          <line x1="3" y1="6" x2="21" y2="6"/>
-          <line x1="3" y1="18" x2="21" y2="18"/>
-        </svg>
-      </button>
-      <div class="chat-header-avatar">🏹</div>
-      <div class="chat-header-info">
-        <div class="chat-header-name">Arjun</div>
-        <div class="chat-header-sub">Warrior of Kurukshetra · Disciple of Lord Krishna · Bhagavad Gita</div>
-      </div>
-      <div class="header-actions">
-        <button class="voice-toggle" id="voiceToggle" onclick="toggleVoice()" title="Toggle voice output">🔊 Voice</button>
-        <a href="/help" class="help-link">Help</a>
-      </div>
-    </div>
-
-    <div class="messages-wrap" id="messages">
-      <div class="intro-msg" id="intro-section">
-        <div class="intro-lotus">🏹</div>
-        <h2>Namaste, {{ user_name }}</h2>
-        <p>
-          I am <strong>Arjun</strong> — son of Indra, student of Dronacharya, and the warrior to whom<br>
-          Lord Krishna revealed the eternal truth of the Bhagavad Gita.<br><br>
-          I stood on the battlefield of Kurukshetra with trembling hands and a broken heart —<br>
-          ready to abandon everything. Krishna spoke 700 verses to me that day.<br>
-          Every word changed me forever.
-        </p>
-        <div class="intro-sanskrit">कर्मण्येवाधिकारस्ते मा फलेषु कदाचन</div>
-        <div class="intro-translation">"You have the right to act, but never to the fruits of action." — Gita 2.47</div>
-        <p>Whatever battle you face today — doubt, fear, heartbreak, confusion, anger — I have faced it too.<br>Tell me what weighs on your heart.</p>
-        <br>
-        <div class="suggestions">
-          <div class="suggestion-chip" onclick="sendSuggestion('I am stressed about work and not getting results')">😰 Stressed about work</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('I am heartbroken and feel completely lost')">💔 Heartbroken</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('I feel like giving up on my goals and dreams')">🎯 Giving up on goals</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('I am very angry at someone who hurt me badly')">😤 Angry &amp; hurt</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('I feel confused about my life purpose and dharma')">🌀 Life purpose</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('I am worried about money and financial security')">💰 Money worries</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('What does the Bhagavad Gita say about fear?')">📖 Gita on fear</div>
-          <div class="suggestion-chip" onclick="sendSuggestion('Explain karma to me in simple words')">⚖️ What is karma?</div>
+    <div class="header-actions">
+      <button class="voice-toggle" id="voiceToggle" onclick="toggleVoice()" title="Toggle voice">🔊 Voice</button>
+      <div class="lang-wrapper" id="langWrapper">
+        <button class="lang-btn" onclick="toggleLangDropdown()" title="Change language">
+          <span>🌐</span><span id="langLabel">English</span>
+        </button>
+        <div class="lang-dropdown" id="langDropdown">
+          <div class="lang-option active" data-lang="en" onclick="setLanguage('en')"><span class="flag">🇬🇧</span> English</div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" data-lang="hi" onclick="setLanguage('hi')"><span class="flag">🇮🇳</span> हिंदी</div>
+          <div class="lang-option" data-lang="bn" onclick="setLanguage('bn')"><span class="flag">🇧🇩</span> বাংলা</div>
+          <div class="lang-option" data-lang="ta" onclick="setLanguage('ta')"><span class="flag">🇮🇳</span> தமிழ்</div>
+          <div class="lang-option" data-lang="te" onclick="setLanguage('te')"><span class="flag">🇮🇳</span> తెలుగు</div>
+          <div class="lang-option" data-lang="mr" onclick="setLanguage('mr')"><span class="flag">🇮🇳</span> मराठी</div>
+          <div class="lang-divider"></div>
+          <div class="lang-option" data-lang="es" onclick="setLanguage('es')"><span class="flag">🇪🇸</span> Español</div>
+          <div class="lang-option" data-lang="fr" onclick="setLanguage('fr')"><span class="flag">🇫🇷</span> Français</div>
+          <div class="lang-option" data-lang="de" onclick="setLanguage('de')"><span class="flag">🇩🇪</span> Deutsch</div>
+          <div class="lang-option" data-lang="ja" onclick="setLanguage('ja')"><span class="flag">🇯🇵</span> 日本語</div>
         </div>
       </div>
+      <a href="/help" class="help-link">Help</a>
     </div>
+  </div>
 
-    <div class="input-area">
-      <div class="input-row">
-        <button class="voice-btn" id="voiceBtn" onclick="startVoice()" title="Speak your question">🎙️</button>
-        <textarea
-          id="user-input"
-          placeholder="Tell Arjun what troubles your heart… (Enter to send, Shift+Enter for new line)"
-          rows="1"
-          onkeydown="handleKey(event)"
-          oninput="autoResize(this)"
-        ></textarea>
-        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/>
-          </svg>
-        </button>
+  <div class="messages-wrap" id="messages">
+    <div class="intro-msg" id="intro-section">
+      <div class="intro-lotus">🏹</div>
+      <h2>Namaste, {{ user_name }}</h2>
+      <p>I am <strong>Arjun</strong> — son of Indra, student of Dronacharya, and the warrior to whom<br>
+      Lord Krishna revealed the eternal truth of the Bhagavad Gita.<br><br>
+      I stood on the battlefield of Kurukshetra with trembling hands and a broken heart —<br>
+      ready to abandon everything. Krishna spoke 700 verses to me that day.<br>Every word changed me forever.</p>
+      <div class="intro-sanskrit">कर्मण्येवाधिकारस्ते मा फलेषु कदाचन</div>
+      <div class="intro-translation">"You have the right to act, but never to the fruits of action." — Gita 2.47</div>
+      <p>Whatever battle you face today — doubt, fear, heartbreak, confusion, anger — I have faced it too.<br>Tell me what weighs on your heart.</p>
+      <br>
+      <div class="suggestions">
+        <div class="suggestion-chip" onclick="sendSuggestion('I am stressed about work and not getting results')">😰 Stressed about work</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('I am heartbroken and feel completely lost')">💔 Heartbroken</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('I feel like giving up on my goals and dreams')">🎯 Giving up on goals</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('I am very angry at someone who hurt me badly')">😤 Angry &amp; hurt</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('I feel confused about my life purpose and dharma')">🌀 Life purpose</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('I am worried about money and financial security')">💰 Money worries</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('What does the Bhagavad Gita say about fear?')">📖 Gita on fear</div>
+        <div class="suggestion-chip" onclick="sendSuggestion('Explain karma to me in simple words')">⚖️ What is karma?</div>
       </div>
-      <div class="input-hint">Wisdom from all 18 chapters of the Bhagavad Gita · Your guide from Kurukshetra</div>
     </div>
-  </main>
+  </div>
 
-  <script>
-    const userName = "{{ user_name }}";
-    const mahabharataStory = `{{ story | replace('\n', '\\n') | replace('"', '\\"') }}`;
-    let isTyping = false;
-    let voiceEnabled = true;
+  <div class="input-area">
+    <div class="input-row">
+      <button class="voice-btn" id="voiceBtn" onclick="startVoice()" title="Speak your question">🎙️</button>
+      <textarea id="user-input" placeholder="Tell Arjun what troubles your heart… (Enter to send, Shift+Enter for new line)"
+        rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+      </button>
+    </div>
+    <div class="input-hint">Wisdom from all 18 chapters of the Bhagavad Gita · Your guide from Kurukshetra</div>
+  </div>
+</main>
 
-    // ── INIT ──
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('user-initial').textContent = userName.charAt(0).toUpperCase();
-      document.getElementById('sidebar-story').textContent = mahabharataStory.substring(0, 600) + '…';
-      loadHistory();
-      // Preload voices
-      if (window.speechSynthesis) {
-        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
-        window.speechSynthesis.getVoices();
-      }
-    });
+<!-- THREE.JS 3D SCENE -->
+<script>
+(function() {
+  const canvas   = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x06030f, 1);
 
-    // ── SIDEBAR ──
-   function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  sidebar.classList.toggle('open');
-}
+  const scene  = new THREE.Scene();
+  scene.fog    = new THREE.FogExp2(0x06030f, 0.008);
+  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+  camera.position.set(0, 0, 60);
 
-document.addEventListener('click', function(e) {
-  const sidebar = document.getElementById('sidebar');
-  const menuBtn = document.querySelector('.menu-btn');
+  // Lights
+  scene.add(new THREE.AmbientLight(0x1a0a2e, 2));
+  const goldLight   = new THREE.PointLight(0xd4a017, 3, 120);
+  goldLight.position.set(0, 0, 20);
+  scene.add(goldLight);
+  const purpleLight = new THREE.PointLight(0x6b21a8, 2, 100);
+  purpleLight.position.set(-30, 20, -10);
+  scene.add(purpleLight);
 
-  if (window.innerWidth <= 768) {
-    if (!sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
-      sidebar.classList.remove('open');
-    }
+  // Dharma Chakra rings
+  const mkTorus = (r, tube, segs, col, op, z) => {
+    const m = new THREE.Mesh(
+      new THREE.TorusGeometry(r, tube, 6, segs),
+      new THREE.MeshBasicMaterial({ color: col, wireframe: true, transparent: true, opacity: op })
+    );
+    m.position.z = z;
+    return m;
+  };
+  const chakra    = mkTorus(22, 0.4, 64, 0xd4a017, 0.35, -30);
+  const innerRing = mkTorus(12, 0.3, 48, 0xe8b84b, 0.25, -25);
+  const outerRing = mkTorus(34, 0.25, 80, 0xa07010, 0.15, -40);
+  scene.add(chakra, innerRing, outerRing);
+
+  // Spokes
+  const spokeMat   = new THREE.MeshBasicMaterial({ color: 0xd4a017, transparent: true, opacity: 0.18 });
+  const spokeGroup = new THREE.Group();
+  spokeGroup.position.z = -28;
+  for (let i = 0; i < 8; i++) {
+    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 20, 4), spokeMat);
+    s.rotation.z = (i / 8) * Math.PI;
+    spokeGroup.add(s);
   }
-});
+  scene.add(spokeGroup);
 
-    // ── VOICE TOGGLE ──
-    function toggleVoice() {
-      voiceEnabled = !voiceEnabled;
-      const btn = document.getElementById('voiceToggle');
-      btn.textContent = voiceEnabled ? '🔊 Voice' : '🔇 Muted';
-      btn.classList.toggle('muted', !voiceEnabled);
-      if (!voiceEnabled) window.speechSynthesis.cancel();
+  // Particles
+  const N   = 700;
+  const pos = new Float32Array(N * 3);
+  const vel = new Float32Array(N * 3);
+  const col = new Float32Array(N * 3);
+  const sz  = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const i3 = i * 3;
+    pos[i3]   = (Math.random() - 0.5) * 160;
+    pos[i3+1] = (Math.random() - 0.5) * 100;
+    pos[i3+2] = (Math.random() - 0.5) * 80 - 20;
+    vel[i3]   = (Math.random() - 0.5) * 0.015;
+    vel[i3+1] = Math.random() * 0.02 + 0.005;
+    vel[i3+2] = (Math.random() - 0.5) * 0.01;
+    sz[i]     = Math.random() * 2.5 + 0.5;
+    const t   = Math.random();
+    if (t < 0.5)      { col[i3]=0.85+Math.random()*0.15; col[i3+1]=0.55+Math.random()*0.3; col[i3+2]=0.05+Math.random()*0.2; }
+    else if (t < 0.8) { col[i3]=0.9+Math.random()*0.1;  col[i3+1]=0.8+Math.random()*0.2;  col[i3+2]=0.3+Math.random()*0.3;  }
+    else               { col[i3]=0.95; col[i3+1]=0.95; col[i3+2]=0.95; }
+  }
+  const pGeo = new THREE.BufferGeometry();
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  pGeo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+  const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
+    size: 0.8, vertexColors: true, transparent: true, opacity: 0.85,
+    sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  scene.add(particles);
+
+  // Stars
+  const stPos = new Float32Array(300 * 3);
+  for (let i = 0; i < 300; i++) {
+    stPos[i*3]   = (Math.random()-0.5)*300;
+    stPos[i*3+1] = (Math.random()-0.5)*200;
+    stPos[i*3+2] = -60 - Math.random()*100;
+  }
+  const stGeo = new THREE.BufferGeometry();
+  stGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3));
+  scene.add(new THREE.Points(stGeo, new THREE.PointsMaterial({
+    size:0.3, color:0xffffff, transparent:true, opacity:0.5,
+    sizeAttenuation:true, blending:THREE.AdditiveBlending, depthWrite:false,
+  })));
+
+  let frame = 0;
+  const posAttr = pGeo.attributes.position;
+  function animate() {
+    requestAnimationFrame(animate);
+    frame++;
+    chakra.rotation.z    += 0.0025; chakra.rotation.x    += 0.0008;
+    innerRing.rotation.z -= 0.004;  innerRing.rotation.y += 0.001;
+    spokeGroup.rotation.z += 0.0025;
+    outerRing.rotation.z  -= 0.001; outerRing.rotation.x += 0.0005;
+    goldLight.intensity = 2.5 + Math.sin(frame * 0.02) * 1.0;
+    for (let i = 0; i < N; i++) {
+      const i3 = i*3;
+      posAttr.array[i3]   += vel[i3];
+      posAttr.array[i3+1] += vel[i3+1];
+      posAttr.array[i3+2] += vel[i3+2];
+      if (posAttr.array[i3+1] > 50)  posAttr.array[i3+1] = -50;
+      if (posAttr.array[i3]   > 80)  posAttr.array[i3]   = -80;
+      if (posAttr.array[i3]   < -80) posAttr.array[i3]   =  80;
     }
+    posAttr.needsUpdate = true;
+    camera.position.x = Math.sin(frame * 0.003) * 3;
+    camera.position.y = Math.cos(frame * 0.002) * 2;
+    camera.lookAt(0,0,0);
+    renderer.render(scene, camera);
+  }
+  animate();
 
-    // ── NEW CHAT ──
-    function newChat() {
-      window.speechSynthesis && window.speechSynthesis.cancel();
-      const wrap = document.getElementById('messages');
-      wrap.innerHTML = `
-        <div class="intro-msg" id="intro-section">
-          <div class="intro-lotus">🏹</div>
-          <h2>Namaste, ${userName}</h2>
-          <p>I am here. Tell me what weighs on your heart today.</p>
-          <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
-          <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>
-        </div>`;
-      if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('open');
-      }
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+</script>
+
+<!-- APP LOGIC -->
+<script>
+  const userName         = {{ user_name | tojson }};
+  const mahabharataStory = {{ story | tojson }};
+
+  let isTyping         = false;
+  let voiceEnabled     = true;
+  let allHistory       = [];
+  let currentSessionId = String(Date.now());
+  let activeSessionEl  = null;
+  let currentLang      = localStorage.getItem('arjun_lang') || 'en';
+
+  const LANGUAGES = {
+    en: { name:'English',  flag:'🇬🇧', srLang:'en-IN', ttsLang:'en-GB',
+          voices:['Google UK English Male','Microsoft George','Daniel','Arthur','Microsoft David','Microsoft Mark','Google US English'] },
+    hi: { name:'हिंदी',   flag:'🇮🇳', srLang:'hi-IN', ttsLang:'hi-IN',
+          voices:['Google हिन्दी','Microsoft Hemant','Lekha','Ravi','Microsoft Kalpana'] },
+    bn: { name:'বাংলা',   flag:'🇧🇩', srLang:'bn-IN', ttsLang:'bn-IN',
+          voices:['Google বাংলা','Bangla India'] },
+    ta: { name:'தமிழ்',  flag:'🇮🇳', srLang:'ta-IN', ttsLang:'ta-IN',
+          voices:['Google தமிழ்','Tamil India','Latha'] },
+    te: { name:'తెలుగు', flag:'🇮🇳', srLang:'te-IN', ttsLang:'te-IN',
+          voices:['Google తెలుగు','Telugu India'] },
+    mr: { name:'मराठी',   flag:'🇮🇳', srLang:'mr-IN', ttsLang:'mr-IN',
+          voices:['Google मराठी','Marathi India'] },
+    es: { name:'Español', flag:'🇪🇸', srLang:'es-ES', ttsLang:'es-ES',
+          voices:['Google español de Estados Unidos','Mónica','Jorge','Diego','Microsoft Pablo'] },
+    fr: { name:'Français',flag:'🇫🇷', srLang:'fr-FR', ttsLang:'fr-FR',
+          voices:['Google français','Thomas','Amelie','Microsoft Paul - French'] },
+    de: { name:'Deutsch', flag:'🇩🇪', srLang:'de-DE', ttsLang:'de-DE',
+          voices:['Google Deutsch','Anna','Markus','Microsoft Stefan - German'] },
+    ja: { name:'日本語',   flag:'🇯🇵', srLang:'ja-JP', ttsLang:'ja-JP',
+          voices:['Google 日本語','Kyoko','Otoya','Microsoft Ichiro'] },
+  };
+
+  function escapeHtml(text) {
+    const d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('user-initial').textContent  = userName.charAt(0).toUpperCase();
+    document.getElementById('sidebar-story').textContent = mahabharataStory.substring(0, 500) + '…';
+    applyLanguage(currentLang, false);
+    loadHistory();
+    if (window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+      window.speechSynthesis.getVoices();
     }
+  });
 
-    // ── LOAD HISTORY ──
-    async function loadHistory() {
-      try {
-        const res = await fetch('/api/history');
-        const data = await res.json();
-        if (data.history && data.history.length > 0) {
+  function toggleLangDropdown() {
+    document.getElementById('langDropdown').classList.toggle('open');
+  }
+  document.addEventListener('click', (e) => {
+    const wrapper = document.getElementById('langWrapper');
+    if (wrapper && !wrapper.contains(e.target))
+      document.getElementById('langDropdown').classList.remove('open');
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.querySelector('.menu-btn');
+    if (window.innerWidth <= 768 && sidebar && !sidebar.contains(e.target) && menuBtn && !menuBtn.contains(e.target))
+      sidebar.classList.remove('open');
+  });
+
+  function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('arjun_lang', lang);
+    applyLanguage(lang, true);
+    document.getElementById('langDropdown').classList.remove('open');
+  }
+
+  function applyLanguage(lang, showToast) {
+    const cfg = LANGUAGES[lang] || LANGUAGES['en'];
+    document.getElementById('langLabel').textContent = cfg.name;
+    document.querySelectorAll('.lang-option').forEach(el => {
+      el.classList.toggle('active', el.dataset.lang === lang);
+    });
+    if (showToast) showLangToast(cfg.flag + ' ' + cfg.name);
+  }
+
+  function showLangToast(text) {
+    let t = document.getElementById('lang-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'lang-toast';
+      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
+        'background:rgba(212,160,23,0.95);color:#1a0a00;padding:8px 18px;' +
+        'border-radius:20px;font-size:13px;font-weight:600;font-family:"DM Sans",sans-serif;' +
+        'z-index:9999;box-shadow:0 4px 20px rgba(212,160,23,0.4);transition:opacity 0.3s;';
+      document.body.appendChild(t);
+    }
+    t.textContent = 'Language: ' + text;
+    t.style.opacity = '1';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => { t.style.opacity='0'; }, 2500);
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+
+  function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    const btn = document.getElementById('voiceToggle');
+    btn.textContent = voiceEnabled ? '🔊 Voice' : '🔇 Muted';
+    btn.classList.toggle('muted', !voiceEnabled);
+    if (!voiceEnabled) window.speechSynthesis.cancel();
+  }
+
+  function newChat() {
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    const wrap = document.getElementById('messages');
+    wrap.innerHTML = '';
+    const d = document.createElement('div');
+    d.className = 'intro-msg'; d.id = 'intro-section';
+    d.innerHTML = `<div class="intro-lotus">🏹</div>
+      <h2>Namaste, ${escapeHtml(userName)}</h2>
+      <p>I am here. Tell me what weighs on your heart today.</p>
+      <div class="intro-sanskrit">सर्वधर्मान्परित्यज्य मामेकं शरणं व्रज</div>
+      <div class="intro-translation">"Abandon all duties and surrender unto Me alone." — Gita 18.66</div>`;
+    wrap.appendChild(d);
+    currentSessionId = String(Date.now());
+    activeSessionEl  = null;
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
+  }
+
+  async function loadHistory() {
+    try {
+      const res  = await fetch('/api/conversations');
+      const data = await res.json();
+      allHistory = data.conversations || [];
+      renderConvList();
+      if (allHistory.length > 0) {
+        const last = allHistory[allHistory.length-1];
+        if (last.messages && last.messages.length > 0) {
+          currentSessionId = last.session_id || String(Date.now());
+          activeSessionEl  = last.session_id;
           const intro = document.getElementById('intro-section');
           if (intro) intro.style.display = 'none';
-          data.history.forEach(chat => {
-            addMessage('user', chat.user);
-            addMessage('arjun', chat.arjun);
-          });
+          last.messages.forEach(m => { addMessage('user',m.user,m.timestamp); addMessage('arjun',m.arjun,m.timestamp); });
         }
-      } catch (e) {}
-    }
-
-    // ── SEND SUGGESTION ──
-    function sendSuggestion(text) {
-      document.getElementById('user-input').value = text;
-      sendMessage();
-    }
-
-    // ── HANDLE KEY ──
-    function handleKey(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
       }
-    }
+    } catch(e) { console.error('loadHistory error:',e); }
+  }
 
-    // ── AUTO RESIZE ──
-    function autoResize(el) {
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+  function syncLocalHistory(userMsg, arjunReply) {
+    const ts = new Date().toISOString();
+    const entry = { user:userMsg, arjun:arjunReply, timestamp:ts };
+    const existing = allHistory.find(g => g.session_id === currentSessionId);
+    if (existing) {
+      existing.messages.push(entry);
+    } else {
+      const label = new Date().toLocaleString('en-IN',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      allHistory.push({ session_id:currentSessionId, label, date:ts.slice(0,10), messages:[entry] });
     }
+    renderConvList(currentSessionId);
+  }
 
-    // ── VOICE INPUT ──
-    function startVoice() {
-      if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
-        alert("Voice input not supported in this browser. Try Chrome.");
+  function renderConvList(highlightSessionId=null) {
+    const list = document.getElementById('conv-list');
+    if (!allHistory || allHistory.length===0) {
+      list.innerHTML = '<div class="conv-empty">No conversations yet</div>'; return;
+    }
+    list.innerHTML = '';
+    [...allHistory].reverse().forEach((conv,i) => {
+      const item = document.createElement('div');
+      item.className = 'conv-item';
+      const isActive = highlightSessionId ? conv.session_id===highlightSessionId : i===0;
+      if (isActive) item.classList.add('active');
+      const previewText = escapeHtml((conv.messages[0]?.user||'Conversation').substring(0,38));
+      const labelText   = escapeHtml(conv.label||conv.date||conv.session_id);
+      const sid         = escapeHtml(conv.session_id||('date:'+conv.date));
+      item.innerHTML = `
+        <div class="conv-dot">💬</div>
+        <div class="conv-meta" style="flex:1;min-width:0;">
+          <div class="conv-date">${labelText}</div>
+          <div class="conv-preview">${previewText}…</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="conv-count">${conv.messages.length}</div>
+          <button class="conv-delete-btn" title="Delete" onclick="deleteConversation(event,'${sid}',this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>`;
+      item.addEventListener('click', () => loadConversation(conv,item));
+      list.appendChild(item);
+    });
+  }
+
+  function loadConversation(conv, clickedEl) {
+    document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+    clickedEl.classList.add('active');
+    currentSessionId = conv.session_id || String(Date.now());
+    activeSessionEl  = conv.session_id;
+    const wrap = document.getElementById('messages');
+    wrap.innerHTML = '';
+    conv.messages.forEach(m => { addMessage('user',m.user,m.timestamp); addMessage('arjun',m.arjun,m.timestamp); });
+    scrollBottom();
+    if (window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open');
+  }
+
+  async function deleteConversation(event, date, btnEl) {
+    event.stopPropagation();
+    if (!confirm('Delete this conversation?\nThis cannot be undone.')) return;
+    allHistory = allHistory.filter(g => g.session_id !== date);
+    renderConvList();
+    if (activeSessionEl===date || currentSessionId===date) newChat();
+    try {
+      const res  = await fetch('/api/conversations/'+encodeURIComponent(date), { method:'DELETE' });
+      const data = await res.json();
+      if (!data.success) { console.error('Delete failed:',data.error); await loadHistory(); }
+    } catch(e) { console.error('Delete error:',e); await loadHistory(); }
+  }
+
+  function sendSuggestion(text) {
+    document.getElementById('user-input').value = text;
+    sendMessage();
+  }
+
+  function handleKey(e) {
+    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function autoResize(el) {
+    el.style.height='auto';
+    el.style.height = Math.min(el.scrollHeight,140)+'px';
+  }
+
+  function startVoice() {
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      alert('Voice input not supported in this browser. Try Chrome.'); return;
+    }
+    const btn = document.getElementById('voiceBtn');
+    const rec = new (window.SpeechRecognition||window.webkitSpeechRecognition)();
+    const cfg = LANGUAGES[currentLang]||LANGUAGES['en'];
+    rec.lang           = cfg.srLang;
+    rec.interimResults = false;
+    rec.onstart  = () => btn.classList.add('listening');
+    rec.onend    = () => btn.classList.remove('listening');
+    rec.onresult = (e) => {
+      const text = e.results[0][0].transcript;
+      document.getElementById('user-input').value = text;
+      autoResize(document.getElementById('user-input'));
+      sendMessage();
+    };
+    rec.onerror = (e) => {
+      btn.classList.remove('listening');
+      if (e.error!=='no-speech') alert('Voice recognition failed. Please try again.');
+    };
+    rec.start();
+  }
+
+  function speak(text) {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const cfg = LANGUAGES[currentLang]||LANGUAGES['en'];
+    let spokenText = text;
+    if (currentLang==='en') spokenText = text.replace(/[\u0900-\u097F]+/g,'').replace(/\s+/g,' ').trim();
+    if (!spokenText) return;
+    const utt = new SpeechSynthesisUtterance(spokenText);
+    utt.lang   = cfg.ttsLang;
+    utt.volume = 1;
+    if (currentLang==='en')             { utt.rate=0.78; utt.pitch=0.0; }
+    else if (['hi','mr'].includes(currentLang)) { utt.rate=0.82; utt.pitch=0.1; }
+    else if (['bn','ta','te'].includes(currentLang)) { utt.rate=0.85; utt.pitch=0.15; }
+    else                                { utt.rate=0.82; utt.pitch=0.1; }
+
+    const voices = window.speechSynthesis.getVoices();
+    let selected = null;
+    for (const name of cfg.voices) {
+      selected = voices.find(v => v.name.includes(name));
+      if (selected) break;
+    }
+    if (!selected) selected = voices.find(v => v.lang===cfg.ttsLang);
+    if (!selected) selected = voices.find(v => v.lang.startsWith(cfg.ttsLang.split('-')[0]));
+    if (selected) utt.voice = selected;
+
+    utt.onstart = () => { document.getElementById('arjun-status-text').textContent = 'Speaking…'; };
+    utt.onend   = () => { document.getElementById('arjun-status-text').textContent = 'Awaiting your question'; };
+    window.speechSynthesis.speak(utt);
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const msg   = input.value.trim();
+    if (!msg || isTyping) return;
+    const intro = document.getElementById('intro-section');
+    if (intro) intro.style.display = 'none';
+    addMessage('user', msg);
+    input.value=''; input.style.height='auto';
+    isTyping=true;
+    document.getElementById('send-btn').disabled=true;
+    document.getElementById('arjun-status-text').textContent='Contemplating…';
+    const typingEl = addTyping();
+    try {
+      const res = await fetch('/api/chat', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ message:msg, session_id:currentSessionId, language:currentLang })
+      });
+      if (!res.ok && res.status===401) {
+        typingEl.remove();
+        addMessage('arjun','Your session has expired. Please log in again 🙏');
+        setTimeout(()=>{ window.location.href='/login'; },2500);
+        isTyping=false; document.getElementById('send-btn').disabled=false;
+        document.getElementById('arjun-status-text').textContent='Awaiting your question';
         return;
       }
-      const btn = document.getElementById('voiceBtn');
-      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-      recognition.lang = "en-IN";
-      recognition.interimResults = false;
-
-      recognition.onstart = () => btn.classList.add('listening');
-      recognition.onend = () => btn.classList.remove('listening');
-
-      recognition.onresult = function(event) {
-        const text = event.results[0][0].transcript;
-        document.getElementById("user-input").value = text;
-        autoResize(document.getElementById("user-input"));
-        sendMessage();
-      };
-      recognition.onerror = function(e) {
-        btn.classList.remove('listening');
-        if (e.error !== 'no-speech') alert("Voice recognition failed. Please try again.");
-      };
-      recognition.start();
+      const data  = await res.json();
+      typingEl.remove();
+      const reply = data.reply||'Something went wrong.';
+      addMessage('arjun', reply);
+      speak(reply);
+      if (res.ok) syncLocalHistory(msg, reply);
+    } catch(e) {
+      typingEl.remove();
+      addMessage('arjun','The connection to Kurukshetra was lost. Please try again 🙏');
     }
+    isTyping=false;
+    document.getElementById('send-btn').disabled=false;
+    document.getElementById('arjun-status-text').textContent='Awaiting your question';
+    scrollBottom();
+  }
 
-    // ── VOICE OUTPUT ──
-    function speak(text) {
-      if (!voiceEnabled || !window.speechSynthesis) return;
-      window.speechSynthesis.cancel();
+  function addMessage(role, text, isoTimestamp=null) {
+    const isArjun = role==='arjun';
+    const _d = isoTimestamp ? new Date(isoTimestamp) : new Date();
+    const d  = (_d instanceof Date && !isNaN(_d)) ? _d : new Date();
+    const time = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    let safeText = escapeHtml(text);
+    if (isArjun) safeText = safeText.replace(/([\u0900-\u097F][^\n<]*)/g,'<div class="shloka-box">$1</div>');
+    const msgDiv = document.getElementById('messages');
+    const div    = document.createElement('div');
+    div.className = 'message '+role;
+    div.innerHTML = `
+      <div class="msg-avatar ${role}">${isArjun?'🏹':escapeHtml(userName.charAt(0).toUpperCase())}</div>
+      <div class="msg-content">
+        <div class="msg-bubble">${safeText}</div>
+        <div class="msg-time">${isArjun?'Arjun':'You'} · ${escapeHtml(time)}</div>
+      </div>`;
+    msgDiv.appendChild(div);
+    scrollBottom();
+  }
 
-      // Strip Sanskrit shlokas from speech (speak only English parts)
-      const cleanText = text
-        .replace(/[\u0900-\u097F]+/g, '') // remove Devanagari
-        .replace(/\s+/g, ' ')
-        .trim();
+  function addTyping() {
+    const wrap = document.getElementById('messages');
+    const div  = document.createElement('div');
+    div.className='message arjun';
+    div.innerHTML=`<div class="msg-avatar arjun">🏹</div>
+      <div class="msg-content"><div class="typing-indicator">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div></div>`;
+    wrap.appendChild(div);
+    scrollBottom();
+    return div;
+  }
 
-      const speech = new SpeechSynthesisUtterance(cleanText);
-      speech.lang = "en-IN";
-      speech.rate = 0.82;
-      speech.pitch = 0.35;
-      speech.volume = 1;
+  function scrollBottom() {
+    const wrap = document.getElementById('messages');
+    wrap.scrollTop = wrap.scrollHeight;
+  }
 
-      const voices = window.speechSynthesis.getVoices();
-      const preferredNames = [
-        "Google UK English Male",
-        "Microsoft David",
-        "Microsoft Mark",
-        "Google हिन्दी"
-      ];
-
-      let selected = null;
-      for (const name of preferredNames) {
-        selected = voices.find(v => v.name.includes(name));
-        if (selected) break;
-      }
-      // Fallback: any male English voice
-      if (!selected) {
-        selected = voices.find(v =>
-          (v.lang.startsWith('en')) && v.name.toLowerCase().includes('male')
-        );
-      }
-      if (selected) speech.voice = selected;
-
-      window.speechSynthesis.speak(speech);
-    }
-
-    // ── SEND MESSAGE ──
-    async function sendMessage() {
-      const input = document.getElementById('user-input');
-      const msg = input.value.trim();
-      if (!msg || isTyping) return;
-
-      const intro = document.getElementById('intro-section');
-      if (intro) intro.style.display = 'none';
-
-      addMessage('user', msg);
-      input.value = '';
-      input.style.height = 'auto';
-
-      isTyping = true;
-      document.getElementById('send-btn').disabled = true;
-
-      const typingEl = addTyping();
-
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: msg })
-        });
-        const data = await res.json();
-        typingEl.remove();
-        const reply = data.reply || "Something went wrong.";
-        addMessage('arjun', reply);
-        speak(reply);
-      } catch (e) {
-        typingEl.remove();
-        addMessage('arjun', 'The connection to Kurukshetra was lost. Please try again 🙏');
-      }
-
-      isTyping = false;
-      document.getElementById('send-btn').disabled = false;
-      scrollBottom();
-    }
-
-    // ── ADD MESSAGE ──
-    function addMessage(role, text) {
-      const wrap = document.getElementById('messages');
-      const div = document.createElement('div');
-      div.className = `message ${role}`;
-      const isArjun = role === 'arjun';
-      const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-      // Format Arjun's messages — highlight Sanskrit shlokas
-      let formattedText = text;
-      if (isArjun) {
-        // Wrap Devanagari text in shloka box
-        formattedText = text.replace(
-          /([\u0900-\u097F][^\n]*)/g,
-          '<div class="shloka-box">$1</div>'
-        );
-      }
-
-      div.innerHTML = `
-        <div class="msg-avatar ${role}">${isArjun ? '🏹' : userName.charAt(0).toUpperCase()}</div>
-        <div class="msg-content">
-          <div class="msg-bubble">${formattedText}</div>
-          <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${time}</div>
-        </div>`;
-      wrap.appendChild(div);
-      scrollBottom();
-    }
-
-    // ── TYPING INDICATOR ──
-    function addTyping() {
-      const wrap = document.getElementById('messages');
-      const div = document.createElement('div');
-      div.className = 'message arjun';
-      div.innerHTML = `
-        <div class="msg-avatar arjun">🏹</div>
-        <div class="msg-content">
-          <div class="typing-indicator">
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-          </div>
-        </div>`;
-      wrap.appendChild(div);
-      scrollBottom();
-      return div;
-    }
-
-    // ── SCROLL ──
-    function scrollBottom() {
-      const wrap = document.getElementById('messages');
-      wrap.scrollTop = wrap.scrollHeight;
-    }
-  </script>
+  async function doLogout() {
+    try { await fetch('/logout',{method:'POST'}); } catch(e){}
+    window.location.href='/';
+  }
+</script>
 </body>
 </html>
