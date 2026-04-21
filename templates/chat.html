@@ -76,6 +76,15 @@ body {
   cursor: pointer; font-size: 12px;
   font-family: 'DM Sans', sans-serif; font-weight: 500;
   transition: all 0.2s; white-space: nowrap;
+  position: relative;
+}
+.lang-btn.switching {
+  animation: lang-pulse 0.4s ease-out;
+}
+@keyframes lang-pulse {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.1) rotate(5deg); background: rgba(212,160,23,0.2); }
+  100% { transform: scale(1) rotate(0deg); }
 }
 .lang-btn:hover { background: rgba(212,160,23,0.2); border-color: rgba(212,160,23,0.5); }
 .lang-dropdown {
@@ -90,10 +99,19 @@ body {
   display: flex; align-items: center; gap: 8px;
   padding: 8px 10px; border-radius: 8px; cursor: pointer;
   color: #c8b8e8; font-size: 13px;
-  font-family: 'DM Sans', sans-serif; transition: background 0.15s;
+  font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+  position: relative;
 }
 .lang-option:hover { background: rgba(212,160,23,0.15); color: #f0d070; }
-.lang-option.active { background: rgba(212,160,23,0.2); color: #d4a017; font-weight: 600; }
+.lang-option.active { 
+  background: rgba(212,160,23,0.2); color: #d4a017; font-weight: 600;
+  animation: lang-select 0.3s ease-out;
+}
+@keyframes lang-select {
+  0% { transform: translateX(0) scale(0.95); }
+  50% { transform: translateX(4px) scale(1.02); }
+  100% { transform: translateX(0) scale(1); }
+}
 .lang-option .flag { font-size: 16px; }
 .lang-divider { height: 1px; background: rgba(212,160,23,0.12); margin: 4px 0; }
 .header-actions { display: flex; align-items: center; gap: 8px; }
@@ -423,6 +441,10 @@ body {
   });
 
   function toggleLangDropdown() {
+    if (isTyping) {
+      alert('⏳ Wait for Arjun to finish responding before changing language');
+      return;
+    }
     document.getElementById('langDropdown').classList.toggle('open');
   }
   document.addEventListener('click', (e) => {
@@ -436,9 +458,22 @@ body {
   });
 
   function setLanguage(lang) {
+    if (lang === currentLang) return;
+    
+    // Trigger animation on button
+    const btn = document.querySelector('.lang-btn');
+    btn.classList.add('switching');
+    setTimeout(() => btn.classList.remove('switching'), 400);
+    
+    // Stop any ongoing speech
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    
+    // Update state
     currentLang = lang;
     localStorage.setItem('arjun_lang', lang);
     applyLanguage(lang, true);
+    
+    // Close dropdown
     document.getElementById('langDropdown').classList.remove('open');
   }
 
@@ -459,13 +494,21 @@ body {
       t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
         'background:rgba(212,160,23,0.95);color:#1a0a00;padding:8px 18px;' +
         'border-radius:20px;font-size:13px;font-weight:600;font-family:"DM Sans",sans-serif;' +
-        'z-index:9999;box-shadow:0 4px 20px rgba(212,160,23,0.4);transition:opacity 0.3s;';
+        'z-index:9999;box-shadow:0 4px 20px rgba(212,160,23,0.4);' +
+        'transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);' +
+        'opacity:0;transform:translateX(-50%) translateY(20px);';
       document.body.appendChild(t);
     }
     t.textContent = 'Language: ' + text;
+    // Trigger slide-in animation
+    t.offsetHeight; // Force reflow
     t.style.opacity = '1';
+    t.style.transform = 'translateX(-50%) translateY(0)';
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => { t.style.opacity='0'; }, 2500);
+    t._timer = setTimeout(() => { 
+      t.style.opacity = '0';
+      t.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 2500);
   }
 
   function toggleSidebar() {
