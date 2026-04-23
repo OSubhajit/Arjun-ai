@@ -24,11 +24,11 @@ AI_MODEL   = os.getenv("AI_MODEL", "openai/gpt-3.5-turbo")
 
 if not SECRET_KEY:
     if IS_PROD:
-        print("❌ SECRET_KEY env var not set — refusing to start in production")
+        print("FATAL: SECRET_KEY env var not set — refusing to start in production")
         sys.exit(1)
     else:
         SECRET_KEY = "dev_only_not_for_production"
-        print("⚠️  WARNING: Using dev SECRET_KEY. Set SECRET_KEY env var before deploying.")
+        print("WARNING: Using dev SECRET_KEY. Set SECRET_KEY env var before deploying.")
 
 print("=== STARTUP ===")
 print("MONGO_URI:", "set" if MONGO_URI else "MISSING")
@@ -38,15 +38,15 @@ print("IS_PROD  :", IS_PROD)
 print("===============")
 
 if not MONGO_URI:
-    print("❌ MONGO_URI not found — exiting")
+    print("FATAL: MONGO_URI not found — exiting")
     sys.exit(1)
 
 try:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     client.server_info()
-    print("✅ MongoDB Connected")
+    print("MongoDB Connected")
 except Exception as e:
-    print("❌ MongoDB Error:", e)
+    print("MongoDB Error:", e)
     traceback.print_exc()
     sys.exit(1)
 
@@ -55,28 +55,27 @@ users_collection = db["users"]
 otp_collection   = db["otp_store"]
 rate_collection  = db["rate_limits"]
 
-# FIX 06 — unique index on email prevents duplicate accounts from race conditions
 try:
     users_collection.create_index("email", unique=True, background=True)
-    print("✅ Unique email index ready")
+    print("Unique email index ready")
 except Exception as e:
-    print("⚠️  Email index warning:", e)
+    print("Email index warning:", e)
 
 try:
     otp_collection.create_index(
         [("expires_at", ASCENDING)], expireAfterSeconds=0, background=True
     )
-    print("✅ OTP TTL index ready")
+    print("OTP TTL index ready")
 except Exception as e:
-    print("⚠️  OTP TTL index warning:", e)
+    print("OTP TTL index warning:", e)
 
 try:
     rate_collection.create_index(
         [("expires_at", ASCENDING)], expireAfterSeconds=0, background=True
     )
-    print("✅ Rate limit TTL index ready")
+    print("Rate limit TTL index ready")
 except Exception as e:
-    print("⚠️  Rate limit TTL index warning:", e)
+    print("Rate limit TTL index warning:", e)
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -85,8 +84,57 @@ app.config['SESSION_COOKIE_HTTPONLY']    = True
 app.config['SESSION_COOKIE_SAMESITE']   = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
+# ── Module-level constants (FIX 4 — moved out of request handler) ─────────────
 
-# FIX 04 — Security headers on every response
+# All supported language codes — validated on /api/chat
+ALLOWED_LANGS = {
+    # Indian
+    "en", "hi", "bn", "ta", "te", "mr", "gu", "kn", "ml", "pa", "or", "as", "ur",
+    # European
+    "es", "fr", "de", "it", "pt", "ru", "nl", "pl", "sv", "no", "da", "fi",
+    "el", "ro", "cs", "hu", "uk", "tr", "sr", "hr", "sk", "bg",
+    # Asian / Pacific
+    "ja", "ko", "zh", "id", "ms", "th", "vi", "ar", "fa", "he", "ne", "si",
+    # African
+    "sw", "af",
+}
+
+# Display names used for building dynamic AI language instructions
+LANGUAGE_NAMES = {
+    "en": "English",      "hi": "Hindi",         "bn": "Bengali",
+    "ta": "Tamil",        "te": "Telugu",        "mr": "Marathi",
+    "gu": "Gujarati",     "kn": "Kannada",       "ml": "Malayalam",
+    "pa": "Punjabi",      "or": "Odia",          "as": "Assamese",
+    "ur": "Urdu",         "es": "Spanish",       "fr": "French",
+    "de": "German",       "it": "Italian",       "pt": "Portuguese",
+    "ru": "Russian",      "nl": "Dutch",         "pl": "Polish",
+    "sv": "Swedish",      "no": "Norwegian",     "da": "Danish",
+    "fi": "Finnish",      "el": "Greek",         "ro": "Romanian",
+    "cs": "Czech",        "hu": "Hungarian",     "uk": "Ukrainian",
+    "tr": "Turkish",      "sr": "Serbian",       "hr": "Croatian",
+    "sk": "Slovak",       "bg": "Bulgarian",     "ja": "Japanese",
+    "ko": "Korean",       "zh": "Chinese",       "id": "Indonesian",
+    "ms": "Malay",        "th": "Thai",          "vi": "Vietnamese",
+    "ar": "Arabic",       "fa": "Persian",       "he": "Hebrew",
+    "ne": "Nepali",       "si": "Sinhala",       "sw": "Swahili",
+    "af": "Afrikaans",
+}
+
+
+def get_lang_instruction(lang: str):
+    """Build dynamic language instruction for AI. Returns None for English."""
+    if lang == "en":
+        return None
+    name = LANGUAGE_NAMES.get(lang, lang)
+    return (
+        f"IMPORTANT: Respond entirely in {name}. "
+        f"Keep all Sanskrit shlokas in their original Sanskrit script, "
+        f"but provide their meaning and explanation in {name}."
+    )
+
+
+# ── Security headers ──────────────────────────────────────────────────────────
+
 @app.after_request
 def set_security_headers(response):
     response.headers['X-Frame-Options']        = 'DENY'
@@ -95,7 +143,8 @@ def set_security_headers(response):
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com "
-        "https://partner.googleadservices.com https://tpc.googlesyndication.com; "
+        "https://partner.googleadservices.com https://tpc.googlesyndication.com "
+        "https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
         "img-src 'self' data: https:; "
@@ -105,10 +154,21 @@ def set_security_headers(response):
     return response
 
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+
 _EMAIL_RE = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
 
 def is_valid_email(email: str) -> bool:
     return bool(_EMAIL_RE.match(email))
+
+
+def get_client_ip() -> str:
+    """Return real client IP, honouring Render/proxy X-Forwarded-For header.
+    FIX 2 — request.remote_addr was returning proxy IP, breaking per-user rate limits."""
+    xff = request.headers.get("X-Forwarded-For", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.remote_addr or "unknown"
 
 
 def is_rate_limited(ip: str, max_calls: int = 3, window_sec: int = 600) -> bool:
@@ -125,7 +185,6 @@ def is_rate_limited(ip: str, max_calls: int = 3, window_sec: int = 600) -> bool:
     return False
 
 
-# FIX 01 — Login brute-force protection (separate key-space)
 def is_login_rate_limited(ip: str) -> bool:
     """Max 10 login attempts per 15 minutes per IP."""
     now          = datetime.now(timezone.utc)
@@ -142,15 +201,13 @@ def is_login_rate_limited(ip: str) -> bool:
 
 
 def generate_csrf_token() -> str:
-    """Generate and store a CSRF token in the session."""
     if 'csrf_token' not in session:
         session['csrf_token'] = secrets.token_hex(32)
     return session['csrf_token']
 
 
 def validate_csrf() -> bool:
-    """Validate CSRF token from X-CSRF-Token header against session value."""
-    token = request.headers.get('X-CSRF-Token', '')
+    token  = request.headers.get('X-CSRF-Token', '')
     stored = session.get('csrf_token', '')
     if not token or not stored:
         return False
@@ -158,7 +215,6 @@ def validate_csrf() -> bool:
 
 
 def verify_otp_value(stored: str, provided: str) -> bool:
-    """Constant-time comparison — prevents timing-based OTP brute-force."""
     if not stored or not provided:
         return False
     return hmac.compare_digest(str(stored), str(provided))
@@ -180,15 +236,18 @@ def is_chat_rate_limited(email: str, max_calls: int = 20, window_sec: int = 60) 
 
 
 def sanitize_name(name: str) -> str:
-    """Strip HTML tags and limit length on display names."""
     name = str(html_escape(name.strip()))
     return name[:100]
 
 
+# ── Email OTP ─────────────────────────────────────────────────────────────────
+# FIX 1 — function def was completely missing; all OTP sends crashed with NameError
 
+def send_email_otp(email: str, otp: str, name: str = "User") -> bool:
+    """Send OTP via Google Apps Script webhook (free — no paid SMTP needed)."""
     script_url = os.getenv("GMAIL_SCRIPT_URL")
     if not script_url:
-        print("❌ GMAIL_SCRIPT_URL not set")
+        print("GMAIL_SCRIPT_URL not set")
         return False
     try:
         response = requests.post(
@@ -198,19 +257,21 @@ def sanitize_name(name: str) -> str:
         )
         result = response.json()
         if result.get("success"):
-            print(f"✅ OTP sent to {email}")
+            print(f"OTP sent to {email}")
             return True
-        print(f"❌ Script error: {result.get('error')}")
+        print(f"Script error: {result.get('error')}")
         return False
     except Exception as e:
-        print(f"❌ Email error: {e}")
+        print(f"Email error: {e}")
         return False
 
+
+# ── OTP helpers ───────────────────────────────────────────────────────────────
 
 def otp_save(email: str, data: dict):
     data["email"]      = email
     data["expires_at"] = datetime.now(timezone.utc) + timedelta(minutes=10)
-    data.setdefault("attempts", 0)   # FIX 05 — track verify attempts
+    data.setdefault("attempts", 0)
     otp_collection.replace_one({"email": email}, data, upsert=True)
 
 
@@ -231,7 +292,6 @@ def otp_delete(email: str):
     otp_collection.delete_one({"email": email})
 
 
-# FIX 05 — Increment attempt counter; auto-lock after 5 failures
 def otp_record_failed_attempt(email: str) -> int:
     result = otp_collection.find_one_and_update(
         {"email": email},
@@ -240,6 +300,8 @@ def otp_record_failed_attempt(email: str) -> int:
     )
     return result["attempts"] if result else 999
 
+
+# ── Routes ────────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -256,13 +318,16 @@ def login():
     if not validate_csrf():
         return jsonify({"success": False, "message": "Invalid or missing CSRF token."}), 403
 
+    if not request.is_json:
+        return jsonify({"success": False, "message": "JSON required"}), 415
+
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "message": "Invalid request"})
 
     email    = data.get('email', '').strip().lower()
     password = data.get('password', '')
-    remember = bool(data.get('rememberMe', False))   # FIX 08
+    remember = bool(data.get('rememberMe', False))
 
     if not email or not password:
         return jsonify({"success": False, "message": "Email and password required"})
@@ -270,8 +335,7 @@ def login():
     if not is_valid_email(email):
         return jsonify({"success": False, "message": "Invalid email address"})
 
-    # FIX 01 — brute-force protection
-    ip = request.remote_addr or "unknown"
+    ip = get_client_ip()  # FIX 2
     if is_login_rate_limited(ip):
         return jsonify({"success": False, "message": "Too many login attempts. Please wait 15 minutes."})
 
@@ -280,9 +344,8 @@ def login():
     if not user or not bcrypt.checkpw(password.encode(), user['password'].encode()):
         return jsonify({"success": False, "message": "Invalid credentials"})
 
-    # FIX 02 — clear before set prevents session fixation
     session.clear()
-    session.permanent = remember   # FIX 08
+    session.permanent = remember
     session['user']   = email
     session['name']   = user['name']
     return jsonify({"success": True, "redirect": "/chat"})
@@ -295,6 +358,9 @@ def register():
 
     if not validate_csrf():
         return jsonify({"success": False, "message": "Invalid or missing CSRF token."}), 403
+
+    if not request.is_json:
+        return jsonify({"success": False, "message": "JSON required"}), 415
 
     data = request.get_json()
     if not data:
@@ -319,7 +385,7 @@ def register():
         if len(password) < 8:
             return jsonify({"success": False, "message": "Password must be at least 8 characters"})
 
-        ip = request.remote_addr or "unknown"
+        ip = get_client_ip()  # FIX 2
         if is_rate_limited(ip):
             return jsonify({"success": False, "message": "Too many OTP requests. Please wait 10 minutes."})
 
@@ -339,7 +405,7 @@ def register():
 
         sent = send_email_otp(email, otp, name=name)
         if not sent:
-            otp_delete(email)   # FIX — clean up stored OTP if send fails
+            otp_delete(email)
             return jsonify({"success": False, "message": "Failed to send OTP. Check GMAIL_SCRIPT_URL."})
 
         return jsonify({"success": True, "message": "OTP sent to your email!"})
@@ -353,7 +419,6 @@ def register():
         if user_data.get("type") != "register":
             return jsonify({"success": False, "message": "Invalid OTP type."})
 
-        # FIX 05 — block after 5 failed attempts
         if user_data.get("attempts", 0) >= 5:
             otp_delete(email)
             return jsonify({"success": False, "message": "Too many failed attempts. Please request a new OTP."})
@@ -372,7 +437,6 @@ def register():
                 "notes"       : []
             })
         except DuplicateKeyError:
-            # FIX 06 — unique index caught race condition duplicate
             otp_delete(email)
             return jsonify({"success": False, "message": "User already exists. Please log in."})
         except Exception as e:
@@ -380,7 +444,7 @@ def register():
             return jsonify({"success": False, "message": "Database error. Please try again."})
 
         otp_delete(email)
-        session.clear()   # FIX 02
+        session.clear()
         session.permanent = True
         session['user']   = email
         session['name']   = user_data["name"]
@@ -407,6 +471,9 @@ def forgot():
     if not validate_csrf():
         return jsonify({"success": False, "message": "Invalid or missing CSRF token."}), 403
 
+    if not request.is_json:
+        return jsonify({"success": False, "message": "JSON required"}), 415
+
     data = request.get_json()
     if not data:
         return jsonify({"success": False, "message": "Invalid request"})
@@ -418,7 +485,7 @@ def forgot():
         return jsonify({"success": False, "message": "Valid email is required"})
 
     if action == "send_otp":
-        ip = request.remote_addr or "unknown"
+        ip = get_client_ip()  # FIX 2
         if is_rate_limited(ip):
             return jsonify({"success": False, "message": "Too many OTP requests. Please wait 10 minutes."})
 
@@ -444,7 +511,6 @@ def forgot():
 
         user_data = otp_get(email)
 
-        # FIX 05 — attempt limit on forgot-password OTP too
         if user_data and user_data.get("attempts", 0) >= 5:
             otp_delete(email)
             return jsonify({"success": False, "message": "Too many failed attempts. Please request a new OTP."})
@@ -480,23 +546,27 @@ def api_chat():
     if not validate_csrf():
         return jsonify({'reply': 'Invalid or missing CSRF token.'}), 403
 
+    if not request.is_json:
+        return jsonify({'reply': 'JSON required'}), 415
+
     data = request.get_json()
     if not data:
         return jsonify({'reply': 'Invalid request'}), 400
 
-    # Chat rate limit — 20 messages per minute per user
     if is_chat_rate_limited(session['user']):
         return jsonify({'reply': 'Too many messages. Please slow down.'}), 429
 
     user_message = data.get("message", "").strip()
-    language     = data.get("language", "en").strip()
-    ALLOWED_LANGS = {"en","hi","bn","ta","te","mr","es","fr","de","ja"}
-    if language not in ALLOWED_LANGS:
+
+    # FIX 4 — validate language; default 'en' if unknown or bad format
+    language = data.get("language", "en").strip().lower()
+    if not re.match(r'^[a-z]{2,3}$', language) or language not in ALLOWED_LANGS:
         language = "en"
-    session_id   = data.get("session_id", "").strip() or str(int(datetime.now(timezone.utc).timestamp() * 1000))
-    # Validate session_id: digits only (ms timestamp) or date:-prefixed legacy format, max 30 chars
+
+    session_id = data.get("session_id", "").strip() or str(int(datetime.now(timezone.utc).timestamp() * 1000))
     if not re.match(r'^[\d]{1,20}$|^date:[\d]{4}-[\d]{2}-[\d]{2}$', session_id):
         session_id = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+
     if not user_message:
         return jsonify({'reply': 'Empty message'}), 400
 
@@ -556,19 +626,10 @@ REMEMBER:
 You stood on the battlefield of Kurukshetra, ready to give up — and Krishna's words changed everything.
 Now you are here to pass that same transformation to every person who comes to you with their battle."""}]
 
-    LANG_INSTRUCTIONS = {
-        "hi": "IMPORTANT: Respond entirely in Hindi. Keep Sanskrit shlokas in Sanskrit but give their meaning in Hindi.",
-        "bn": "IMPORTANT: Respond entirely in Bengali. Keep Sanskrit shlokas in Sanskrit but give their meaning in Bengali.",
-        "ta": "IMPORTANT: Respond entirely in Tamil. Keep Sanskrit shlokas in Sanskrit but give their meaning in Tamil.",
-        "te": "IMPORTANT: Respond entirely in Telugu. Keep Sanskrit shlokas in Sanskrit but give their meaning in Telugu.",
-        "mr": "IMPORTANT: Respond entirely in Marathi. Keep Sanskrit shlokas in Sanskrit but give their meaning in Marathi.",
-        "es": "IMPORTANT: Respond entirely in Spanish. Keep Sanskrit shlokas in Sanskrit but give their meaning in Spanish.",
-        "fr": "IMPORTANT: Respond entirely in French. Keep Sanskrit shlokas in Sanskrit but give their meaning in French.",
-        "de": "IMPORTANT: Respond entirely in German. Keep Sanskrit shlokas in Sanskrit but give their meaning in German.",
-        "ja": "IMPORTANT: Respond entirely in Japanese. Keep Sanskrit shlokas in Sanskrit but give their meaning in Japanese.",
-    }
-    if language in LANG_INSTRUCTIONS:
-        messages.append({"role": "system", "content": LANG_INSTRUCTIONS[language]})
+    # FIX 4 — dynamic language instruction supports ALL languages, not just 10
+    lang_instruction = get_lang_instruction(language)
+    if lang_instruction:
+        messages.append({"role": "system", "content": lang_instruction})
 
     for chat_entry in history:
         messages.append({"role": "user",      "content": chat_entry["user"]})
@@ -597,7 +658,6 @@ Now you are here to pass that same transformation to every person who comes to y
     except Exception as e:
         print("AI ERROR:", e)
 
-    # FIX 07 — only persist successful AI responses; never store error strings
     if ai_success:
         new_entry = {
             "timestamp" : datetime.now(timezone.utc).isoformat(),
@@ -625,9 +685,10 @@ def api_profile():
     if 'user' not in session:
         return jsonify({"error": "Not logged in"}), 401
 
+    # FIX 3 — bounded $slice prevents loading unbounded history into Python memory
     user_data = users_collection.find_one(
         {"email": session['user']},
-        {"name": 1, "email": 1, "chat_history": 1, "_id": 0}
+        {"name": 1, "email": 1, "chat_history": {"$slice": -200}, "_id": 0}
     )
     if not user_data:
         return jsonify({"error": "User not found"}), 404
@@ -651,7 +712,7 @@ def api_conversations():
 
     user_data = users_collection.find_one(
         {"email": session['user']},
-        {"chat_history": 1, "_id": 0}
+        {"chat_history": {"$slice": -200}, "_id": 0}  # FIX 3
     )
     if not user_data:
         return jsonify({"conversations": []})
@@ -667,19 +728,16 @@ def delete_conversation(date):
     if not validate_csrf():
         return jsonify({"error": "Invalid or missing CSRF token."}), 403
 
-    # Accept: numeric session_id (ms timestamp), date: prefix, or legacy YYYY-MM-DD
     is_date_only   = bool(re.match(r'^\d{4}-\d{2}-\d{2}$', date))
     is_session_id  = bool(re.match(r'^\d+$', date))
     is_date_prefix = date.startswith("date:")
     if not (is_date_only or is_session_id or is_date_prefix):
         return jsonify({"error": "Invalid session identifier"}), 400
 
-    # FIX — use $pull (server-side) instead of fetch-filter-rewrite (Python-side)
     if is_session_id:
         pull_filter = {"session_id": date}
     elif is_date_prefix:
         date_val = date[5:]
-        # Legacy entries: no session_id AND timestamp starts with date_val
         pull_filter = {"session_id": {"$exists": False}, "timestamp": {"$regex": f"^{re.escape(date_val)}"}}
     else:
         pull_filter = {"timestamp": {"$regex": f"^{re.escape(date)}"}}
@@ -709,8 +767,7 @@ def api_history():
 
 def _group_by_session(history):
     """Group chat_history entries by session_id.
-    Old entries without session_id are grouped by date (backward compat).
-    Returns list of {session_id, label, date, messages} dicts."""
+    Old entries without session_id are grouped by date (backward compat)."""
     groups = OrderedDict()
     for entry in history:
         ts         = entry.get("timestamp", "")
@@ -731,7 +788,6 @@ def _group_by_session(history):
 
 
 def _session_label(ts: str) -> str:
-    """Convert ISO timestamp to human-readable session label."""
     try:
         dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
         return dt.strftime("%b %d, %Y · %I:%M %p").lstrip("0")
@@ -739,14 +795,12 @@ def _session_label(ts: str) -> str:
         return ts[:16] if ts else "Unknown"
 
 
-# Keep _group_by_date as alias for backward compat with profile page
 def _group_by_date(history):
     return _group_by_session(history)
 
 
 @app.route('/api/csrf-token')
 def csrf_token_endpoint():
-    """Returns a CSRF token. JS fetches this once and attaches X-CSRF-Token header."""
     return jsonify({"csrf_token": generate_csrf_token()})
 
 
@@ -755,7 +809,6 @@ def privacy():
     return render_template('privacy.html')
 
 
-# FIX 03 — POST-only logout prevents CSRF logout attacks via <img> or link injection
 @app.route('/logout', methods=['POST'])
 def logout():
     if not validate_csrf():
@@ -767,9 +820,9 @@ def logout():
 if __name__ == "__main__":
     try:
         port = int(os.environ.get("PORT", 5000))
-        print(f"✅ Starting app on port {port}")
+        print(f"Starting app on port {port}")
         app.run(host="0.0.0.0", port=port, debug=not IS_PROD)
     except Exception as e:
-        print("❌ STARTUP ERROR:", e)
+        print("STARTUP ERROR:", e)
         traceback.print_exc()
         sys.exit(1)

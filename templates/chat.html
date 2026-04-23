@@ -25,7 +25,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500&family=Noto+Serif+Devanagari:wght@400;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/static/style.css"/>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" id="three-script"></script>
 <style>
 #bg-canvas {
   position: fixed; top: 0; left: 0;
@@ -66,6 +66,8 @@ body {
   backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
 }
+
+/* ── Language picker ─────────────────────────────── */
 .lang-wrapper { position: relative; display: inline-flex; align-items: center; }
 .lang-btn {
   display: flex; align-items: center; gap: 5px;
@@ -76,47 +78,53 @@ body {
   cursor: pointer; font-size: 12px;
   font-family: 'DM Sans', sans-serif; font-weight: 500;
   transition: all 0.2s; white-space: nowrap;
-  position: relative;
 }
-.lang-btn.switching {
-  animation: lang-pulse 0.4s ease-out;
-}
+.lang-btn.switching { animation: lang-pulse 0.4s ease-out; }
 @keyframes lang-pulse {
-  0% { transform: scale(1) rotate(0deg); }
-  50% { transform: scale(1.1) rotate(5deg); background: rgba(212,160,23,0.2); }
-  100% { transform: scale(1) rotate(0deg); }
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.1); background: rgba(212,160,23,0.2); }
+  100% { transform: scale(1); }
 }
 .lang-btn:hover { background: rgba(212,160,23,0.2); border-color: rgba(212,160,23,0.5); }
+
 .lang-dropdown {
   display: none; position: absolute; top: calc(100% + 8px); right: 0;
   background: rgba(10,5,25,0.97); backdrop-filter: blur(20px);
   border: 1px solid rgba(212,160,23,0.3); border-radius: 12px;
-  padding: 6px; min-width: 160px; z-index: 1000;
+  padding: 6px; min-width: 200px; z-index: 1000;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  max-height: 70vh; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(212,160,23,0.3) transparent;
 }
+.lang-dropdown::-webkit-scrollbar { width: 4px; }
+.lang-dropdown::-webkit-scrollbar-thumb { background: rgba(212,160,23,0.3); border-radius: 2px; }
 .lang-dropdown.open { display: block; }
+
+.lang-group-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+  color: rgba(212,160,23,0.5); padding: 8px 10px 4px;
+  font-family: 'DM Sans', sans-serif; text-transform: uppercase;
+}
 .lang-option {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
   color: #c8b8e8; font-size: 13px;
   font-family: 'DM Sans', sans-serif; transition: all 0.15s;
-  position: relative;
 }
 .lang-option:hover { background: rgba(212,160,23,0.15); color: #f0d070; }
-.lang-option.active { 
+.lang-option.active {
   background: rgba(212,160,23,0.2); color: #d4a017; font-weight: 600;
-  animation: lang-select 0.3s ease-out;
 }
-@keyframes lang-select {
-  0% { transform: translateX(0) scale(0.95); }
-  50% { transform: translateX(4px) scale(1.02); }
-  100% { transform: translateX(0) scale(1); }
-}
-.lang-option .flag { font-size: 16px; }
+.lang-option .flag { font-size: 15px; flex-shrink: 0; }
+.lang-option .lang-native { font-size: 11px; color: rgba(200,184,232,0.6); margin-left: auto; }
 .lang-divider { height: 1px; background: rgba(212,160,23,0.12); margin: 4px 0; }
-.header-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ── Other header elements ───────────────────────── */
+.header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .voice-toggle { padding: 5px 10px !important; border-radius: 20px !important; font-size: 12px !important; }
 .voice-toggle.muted { opacity: 0.5; }
+
+/* ── Conversation list delete button ─────────────── */
 .conv-delete-btn {
   display: flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; border: none; background: transparent;
@@ -125,6 +133,8 @@ body {
 }
 .conv-item:hover .conv-delete-btn { color: #888; }
 .conv-delete-btn:hover { background: rgba(220,60,60,0.15) !important; color: #e05555 !important; }
+
+/* ── Animations ──────────────────────────────────── */
 @keyframes ring-pulse {
   0%   { box-shadow: 0 0 0 0 rgba(212,160,23,0.6),0 0 0 0 rgba(212,160,23,0.3); }
   70%  { box-shadow: 0 0 0 10px rgba(212,160,23,0),0 0 0 20px rgba(212,160,23,0); }
@@ -132,15 +142,10 @@ body {
 }
 .arjun-avatar { animation: ring-pulse 3s infinite; }
 @keyframes float-up {
-  0%   { transform: translateY(0px) scale(1); opacity: 0.8; }
-  50%  { transform: translateY(-12px) scale(1.05); opacity: 1; }
-  100% { transform: translateY(0px) scale(1); opacity: 0.8; }
+  0%,100% { transform: translateY(0) scale(1); opacity: 0.8; }
+  50%      { transform: translateY(-12px) scale(1.05); opacity: 1; }
 }
-.intro-lotus {
-  animation: float-up 4s ease-in-out infinite;
-  display: inline-block;
-  filter: drop-shadow(0 0 20px rgba(212,160,23,0.8));
-}
+.intro-lotus { animation: float-up 4s ease-in-out infinite; display: inline-block; filter: drop-shadow(0 0 20px rgba(212,160,23,0.8)); }
 </style>
 </head>
 <body>
@@ -203,21 +208,82 @@ body {
       <button class="voice-toggle" id="voiceToggle" onclick="toggleVoice()" title="Toggle voice">🔊 Voice</button>
       <div class="lang-wrapper" id="langWrapper">
         <button class="lang-btn" onclick="toggleLangDropdown()" title="Change language">
-          <span>🌐</span><span id="langLabel">English</span>
+          <span>🌐</span><span id="langLabel">English</span><span style="font-size:10px;margin-left:2px;">▾</span>
         </button>
         <div class="lang-dropdown" id="langDropdown">
-          <div class="lang-option active" data-lang="en" onclick="setLanguage('en')"><span class="flag">🇬🇧</span> English</div>
+
+          <!-- Indian Languages -->
+          <div class="lang-group-label">🇮🇳 Indian Languages</div>
+          <div class="lang-option active" data-lang="en"  onclick="event.stopPropagation();setLanguage('en')"><span class="flag">🇬🇧</span> English</div>
+          <div class="lang-option" data-lang="hi"  onclick="event.stopPropagation();setLanguage('hi')"><span class="flag">🇮🇳</span> Hindi <span class="lang-native">हिंदी</span></div>
+          <div class="lang-option" data-lang="bn"  onclick="event.stopPropagation();setLanguage('bn')"><span class="flag">🇮🇳</span> Bengali <span class="lang-native">বাংলা</span></div>
+          <div class="lang-option" data-lang="ta"  onclick="event.stopPropagation();setLanguage('ta')"><span class="flag">🇮🇳</span> Tamil <span class="lang-native">தமிழ்</span></div>
+          <div class="lang-option" data-lang="te"  onclick="event.stopPropagation();setLanguage('te')"><span class="flag">🇮🇳</span> Telugu <span class="lang-native">తెలుగు</span></div>
+          <div class="lang-option" data-lang="mr"  onclick="event.stopPropagation();setLanguage('mr')"><span class="flag">🇮🇳</span> Marathi <span class="lang-native">मराठी</span></div>
+          <div class="lang-option" data-lang="gu"  onclick="event.stopPropagation();setLanguage('gu')"><span class="flag">🇮🇳</span> Gujarati <span class="lang-native">ગુજરાતી</span></div>
+          <div class="lang-option" data-lang="kn"  onclick="event.stopPropagation();setLanguage('kn')"><span class="flag">🇮🇳</span> Kannada <span class="lang-native">ಕನ್ನಡ</span></div>
+          <div class="lang-option" data-lang="ml"  onclick="event.stopPropagation();setLanguage('ml')"><span class="flag">🇮🇳</span> Malayalam <span class="lang-native">മലയാളം</span></div>
+          <div class="lang-option" data-lang="pa"  onclick="event.stopPropagation();setLanguage('pa')"><span class="flag">🇮🇳</span> Punjabi <span class="lang-native">ਪੰਜਾਬੀ</span></div>
+          <div class="lang-option" data-lang="or"  onclick="event.stopPropagation();setLanguage('or')"><span class="flag">🇮🇳</span> Odia <span class="lang-native">ଓଡ଼ିଆ</span></div>
+          <div class="lang-option" data-lang="as"  onclick="event.stopPropagation();setLanguage('as')"><span class="flag">🇮🇳</span> Assamese <span class="lang-native">অসমীয়া</span></div>
+          <div class="lang-option" data-lang="ur"  onclick="event.stopPropagation();setLanguage('ur')"><span class="flag">🇵🇰</span> Urdu <span class="lang-native">اردو</span></div>
+          <div class="lang-option" data-lang="ne"  onclick="event.stopPropagation();setLanguage('ne')"><span class="flag">🇳🇵</span> Nepali <span class="lang-native">नेपाली</span></div>
+          <div class="lang-option" data-lang="si"  onclick="event.stopPropagation();setLanguage('si')"><span class="flag">🇱🇰</span> Sinhala <span class="lang-native">සිංහල</span></div>
+
           <div class="lang-divider"></div>
-          <div class="lang-option" data-lang="hi" onclick="setLanguage('hi')"><span class="flag">🇮🇳</span> हिंदी</div>
-          <div class="lang-option" data-lang="bn" onclick="setLanguage('bn')"><span class="flag">🇧🇩</span> বাংলা</div>
-          <div class="lang-option" data-lang="ta" onclick="setLanguage('ta')"><span class="flag">🇮🇳</span> தமிழ்</div>
-          <div class="lang-option" data-lang="te" onclick="setLanguage('te')"><span class="flag">🇮🇳</span> తెలుగు</div>
-          <div class="lang-option" data-lang="mr" onclick="setLanguage('mr')"><span class="flag">🇮🇳</span> मराठी</div>
+
+          <!-- East & Southeast Asian -->
+          <div class="lang-group-label">🌏 East & Southeast Asian</div>
+          <div class="lang-option" data-lang="zh"  onclick="event.stopPropagation();setLanguage('zh')"><span class="flag">🇨🇳</span> Chinese <span class="lang-native">中文</span></div>
+          <div class="lang-option" data-lang="ja"  onclick="event.stopPropagation();setLanguage('ja')"><span class="flag">🇯🇵</span> Japanese <span class="lang-native">日本語</span></div>
+          <div class="lang-option" data-lang="ko"  onclick="event.stopPropagation();setLanguage('ko')"><span class="flag">🇰🇷</span> Korean <span class="lang-native">한국어</span></div>
+          <div class="lang-option" data-lang="th"  onclick="event.stopPropagation();setLanguage('th')"><span class="flag">🇹🇭</span> Thai <span class="lang-native">ไทย</span></div>
+          <div class="lang-option" data-lang="vi"  onclick="event.stopPropagation();setLanguage('vi')"><span class="flag">🇻🇳</span> Vietnamese <span class="lang-native">Tiếng Việt</span></div>
+          <div class="lang-option" data-lang="id"  onclick="event.stopPropagation();setLanguage('id')"><span class="flag">🇮🇩</span> Indonesian <span class="lang-native">Bahasa Indonesia</span></div>
+          <div class="lang-option" data-lang="ms"  onclick="event.stopPropagation();setLanguage('ms')"><span class="flag">🇲🇾</span> Malay <span class="lang-native">Bahasa Melayu</span></div>
+
           <div class="lang-divider"></div>
-          <div class="lang-option" data-lang="es" onclick="setLanguage('es')"><span class="flag">🇪🇸</span> Español</div>
-          <div class="lang-option" data-lang="fr" onclick="setLanguage('fr')"><span class="flag">🇫🇷</span> Français</div>
-          <div class="lang-option" data-lang="de" onclick="setLanguage('de')"><span class="flag">🇩🇪</span> Deutsch</div>
-          <div class="lang-option" data-lang="ja" onclick="setLanguage('ja')"><span class="flag">🇯🇵</span> 日本語</div>
+
+          <!-- Middle East & Central Asia -->
+          <div class="lang-group-label">🌍 Middle East & Central Asia</div>
+          <div class="lang-option" data-lang="ar"  onclick="event.stopPropagation();setLanguage('ar')"><span class="flag">🇸🇦</span> Arabic <span class="lang-native">العربية</span></div>
+          <div class="lang-option" data-lang="fa"  onclick="event.stopPropagation();setLanguage('fa')"><span class="flag">🇮🇷</span> Persian <span class="lang-native">فارسی</span></div>
+          <div class="lang-option" data-lang="he"  onclick="event.stopPropagation();setLanguage('he')"><span class="flag">🇮🇱</span> Hebrew <span class="lang-native">עברית</span></div>
+          <div class="lang-option" data-lang="tr"  onclick="event.stopPropagation();setLanguage('tr')"><span class="flag">🇹🇷</span> Turkish <span class="lang-native">Türkçe</span></div>
+
+          <div class="lang-divider"></div>
+
+          <!-- European -->
+          <div class="lang-group-label">🌍 European</div>
+          <div class="lang-option" data-lang="es"  onclick="event.stopPropagation();setLanguage('es')"><span class="flag">🇪🇸</span> Spanish <span class="lang-native">Español</span></div>
+          <div class="lang-option" data-lang="fr"  onclick="event.stopPropagation();setLanguage('fr')"><span class="flag">🇫🇷</span> French <span class="lang-native">Français</span></div>
+          <div class="lang-option" data-lang="de"  onclick="event.stopPropagation();setLanguage('de')"><span class="flag">🇩🇪</span> German <span class="lang-native">Deutsch</span></div>
+          <div class="lang-option" data-lang="it"  onclick="event.stopPropagation();setLanguage('it')"><span class="flag">🇮🇹</span> Italian <span class="lang-native">Italiano</span></div>
+          <div class="lang-option" data-lang="pt"  onclick="event.stopPropagation();setLanguage('pt')"><span class="flag">🇵🇹</span> Portuguese <span class="lang-native">Português</span></div>
+          <div class="lang-option" data-lang="ru"  onclick="event.stopPropagation();setLanguage('ru')"><span class="flag">🇷🇺</span> Russian <span class="lang-native">Русский</span></div>
+          <div class="lang-option" data-lang="nl"  onclick="event.stopPropagation();setLanguage('nl')"><span class="flag">🇳🇱</span> Dutch <span class="lang-native">Nederlands</span></div>
+          <div class="lang-option" data-lang="pl"  onclick="event.stopPropagation();setLanguage('pl')"><span class="flag">🇵🇱</span> Polish <span class="lang-native">Polski</span></div>
+          <div class="lang-option" data-lang="sv"  onclick="event.stopPropagation();setLanguage('sv')"><span class="flag">🇸🇪</span> Swedish <span class="lang-native">Svenska</span></div>
+          <div class="lang-option" data-lang="no"  onclick="event.stopPropagation();setLanguage('no')"><span class="flag">🇳🇴</span> Norwegian <span class="lang-native">Norsk</span></div>
+          <div class="lang-option" data-lang="da"  onclick="event.stopPropagation();setLanguage('da')"><span class="flag">🇩🇰</span> Danish <span class="lang-native">Dansk</span></div>
+          <div class="lang-option" data-lang="fi"  onclick="event.stopPropagation();setLanguage('fi')"><span class="flag">🇫🇮</span> Finnish <span class="lang-native">Suomi</span></div>
+          <div class="lang-option" data-lang="el"  onclick="event.stopPropagation();setLanguage('el')"><span class="flag">🇬🇷</span> Greek <span class="lang-native">Ελληνικά</span></div>
+          <div class="lang-option" data-lang="ro"  onclick="event.stopPropagation();setLanguage('ro')"><span class="flag">🇷🇴</span> Romanian <span class="lang-native">Română</span></div>
+          <div class="lang-option" data-lang="cs"  onclick="event.stopPropagation();setLanguage('cs')"><span class="flag">🇨🇿</span> Czech <span class="lang-native">Čeština</span></div>
+          <div class="lang-option" data-lang="hu"  onclick="event.stopPropagation();setLanguage('hu')"><span class="flag">🇭🇺</span> Hungarian <span class="lang-native">Magyar</span></div>
+          <div class="lang-option" data-lang="uk"  onclick="event.stopPropagation();setLanguage('uk')"><span class="flag">🇺🇦</span> Ukrainian <span class="lang-native">Українська</span></div>
+          <div class="lang-option" data-lang="sr"  onclick="event.stopPropagation();setLanguage('sr')"><span class="flag">🇷🇸</span> Serbian <span class="lang-native">Српски</span></div>
+          <div class="lang-option" data-lang="hr"  onclick="event.stopPropagation();setLanguage('hr')"><span class="flag">🇭🇷</span> Croatian <span class="lang-native">Hrvatski</span></div>
+          <div class="lang-option" data-lang="sk"  onclick="event.stopPropagation();setLanguage('sk')"><span class="flag">🇸🇰</span> Slovak <span class="lang-native">Slovenčina</span></div>
+          <div class="lang-option" data-lang="bg"  onclick="event.stopPropagation();setLanguage('bg')"><span class="flag">🇧🇬</span> Bulgarian <span class="lang-native">Български</span></div>
+
+          <div class="lang-divider"></div>
+
+          <!-- African -->
+          <div class="lang-group-label">🌍 African</div>
+          <div class="lang-option" data-lang="sw"  onclick="event.stopPropagation();setLanguage('sw')"><span class="flag">🇰🇪</span> Swahili <span class="lang-native">Kiswahili</span></div>
+          <div class="lang-option" data-lang="af"  onclick="event.stopPropagation();setLanguage('af')"><span class="flag">🇿🇦</span> Afrikaans</div>
+
         </div>
       </div>
       <a href="/help" class="help-link">Help</a>
@@ -262,130 +328,125 @@ body {
   </div>
 </main>
 
-<!-- THREE.JS 3D SCENE -->
+<!-- THREE.JS 3D SCENE — initialised after script loads -->
 <script>
-(function() {
-  const canvas   = document.getElementById('bg-canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setClearColor(0x06030f, 1);
-
-  const scene  = new THREE.Scene();
-  scene.fog    = new THREE.FogExp2(0x06030f, 0.008);
-  const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
-  camera.position.set(0, 0, 60);
-
-  // Lights
-  scene.add(new THREE.AmbientLight(0x1a0a2e, 2));
-  const goldLight   = new THREE.PointLight(0xd4a017, 3, 120);
-  goldLight.position.set(0, 0, 20);
-  scene.add(goldLight);
-  const purpleLight = new THREE.PointLight(0x6b21a8, 2, 100);
-  purpleLight.position.set(-30, 20, -10);
-  scene.add(purpleLight);
-
-  // Dharma Chakra rings
-  const mkTorus = (r, tube, segs, col, op, z) => {
-    const m = new THREE.Mesh(
-      new THREE.TorusGeometry(r, tube, 6, segs),
-      new THREE.MeshBasicMaterial({ color: col, wireframe: true, transparent: true, opacity: op })
-    );
-    m.position.z = z;
-    return m;
-  };
-  const chakra    = mkTorus(22, 0.4, 64, 0xd4a017, 0.35, -30);
-  const innerRing = mkTorus(12, 0.3, 48, 0xe8b84b, 0.25, -25);
-  const outerRing = mkTorus(34, 0.25, 80, 0xa07010, 0.15, -40);
-  scene.add(chakra, innerRing, outerRing);
-
-  // Spokes
-  const spokeMat   = new THREE.MeshBasicMaterial({ color: 0xd4a017, transparent: true, opacity: 0.18 });
-  const spokeGroup = new THREE.Group();
-  spokeGroup.position.z = -28;
-  for (let i = 0; i < 8; i++) {
-    const s = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 20, 4), spokeMat);
-    s.rotation.z = (i / 8) * Math.PI;
-    spokeGroup.add(s);
-  }
-  scene.add(spokeGroup);
-
-  // Particles
-  const N   = 700;
-  const pos = new Float32Array(N * 3);
-  const vel = new Float32Array(N * 3);
-  const col = new Float32Array(N * 3);
-  const sz  = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const i3 = i * 3;
-    pos[i3]   = (Math.random() - 0.5) * 160;
-    pos[i3+1] = (Math.random() - 0.5) * 100;
-    pos[i3+2] = (Math.random() - 0.5) * 80 - 20;
-    vel[i3]   = (Math.random() - 0.5) * 0.015;
-    vel[i3+1] = Math.random() * 0.02 + 0.005;
-    vel[i3+2] = (Math.random() - 0.5) * 0.01;
-    sz[i]     = Math.random() * 2.5 + 0.5;
-    const t   = Math.random();
-    if (t < 0.5)      { col[i3]=0.85+Math.random()*0.15; col[i3+1]=0.55+Math.random()*0.3; col[i3+2]=0.05+Math.random()*0.2; }
-    else if (t < 0.8) { col[i3]=0.9+Math.random()*0.1;  col[i3+1]=0.8+Math.random()*0.2;  col[i3+2]=0.3+Math.random()*0.3;  }
-    else               { col[i3]=0.95; col[i3+1]=0.95; col[i3+2]=0.95; }
-  }
-  const pGeo = new THREE.BufferGeometry();
-  pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  pGeo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
-  const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
-    size: 0.8, vertexColors: true, transparent: true, opacity: 0.85,
-    sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false,
-  }));
-  scene.add(particles);
-
-  // Stars
-  const stPos = new Float32Array(300 * 3);
-  for (let i = 0; i < 300; i++) {
-    stPos[i*3]   = (Math.random()-0.5)*300;
-    stPos[i*3+1] = (Math.random()-0.5)*200;
-    stPos[i*3+2] = -60 - Math.random()*100;
-  }
-  const stGeo = new THREE.BufferGeometry();
-  stGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3));
-  scene.add(new THREE.Points(stGeo, new THREE.PointsMaterial({
-    size:0.3, color:0xffffff, transparent:true, opacity:0.5,
-    sizeAttenuation:true, blending:THREE.AdditiveBlending, depthWrite:false,
-  })));
-
-  let frame = 0;
-  const posAttr = pGeo.attributes.position;
-  function animate() {
-    requestAnimationFrame(animate);
-    frame++;
-    chakra.rotation.z    += 0.0025; chakra.rotation.x    += 0.0008;
-    innerRing.rotation.z -= 0.004;  innerRing.rotation.y += 0.001;
-    spokeGroup.rotation.z += 0.0025;
-    outerRing.rotation.z  -= 0.001; outerRing.rotation.x += 0.0005;
-    goldLight.intensity = 2.5 + Math.sin(frame * 0.02) * 1.0;
-    for (let i = 0; i < N; i++) {
-      const i3 = i*3;
-      posAttr.array[i3]   += vel[i3];
-      posAttr.array[i3+1] += vel[i3+1];
-      posAttr.array[i3+2] += vel[i3+2];
-      if (posAttr.array[i3+1] > 50)  posAttr.array[i3+1] = -50;
-      if (posAttr.array[i3]   > 80)  posAttr.array[i3]   = -80;
-      if (posAttr.array[i3]   < -80) posAttr.array[i3]   =  80;
-    }
-    posAttr.needsUpdate = true;
-    camera.position.x = Math.sin(frame * 0.003) * 3;
-    camera.position.y = Math.cos(frame * 0.002) * 2;
-    camera.lookAt(0,0,0);
-    renderer.render(scene, camera);
-  }
-  animate();
-
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+document.getElementById('three-script').addEventListener('load', function() {
+  (function() {
+    const canvas   = document.getElementById('bg-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-})();
+    renderer.setClearColor(0x06030f, 1);
+
+    const scene  = new THREE.Scene();
+    scene.fog    = new THREE.FogExp2(0x06030f, 0.008);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, 0, 60);
+
+    scene.add(new THREE.AmbientLight(0x1a0a2e, 2));
+    const goldLight   = new THREE.PointLight(0xd4a017, 3, 120);
+    goldLight.position.set(0, 0, 20);
+    scene.add(goldLight);
+    const purpleLight = new THREE.PointLight(0x6b21a8, 2, 100);
+    purpleLight.position.set(-30, 20, -10);
+    scene.add(purpleLight);
+
+    const mkTorus = (r, tube, segs, col, op, z) => {
+      const m = new THREE.Mesh(
+        new THREE.TorusGeometry(r, tube, 6, segs),
+        new THREE.MeshBasicMaterial({ color: col, wireframe: true, transparent: true, opacity: op })
+      );
+      m.position.z = z;
+      return m;
+    };
+    const chakra    = mkTorus(22, 0.4, 64, 0xd4a017, 0.35, -30);
+    const innerRing = mkTorus(12, 0.3, 48, 0xe8b84b, 0.25, -25);
+    const outerRing = mkTorus(34, 0.25, 80, 0xa07010, 0.15, -40);
+    scene.add(chakra, innerRing, outerRing);
+
+    const spokeMat   = new THREE.MeshBasicMaterial({ color: 0xd4a017, transparent: true, opacity: 0.18 });
+    const spokeGroup = new THREE.Group();
+    spokeGroup.position.z = -28;
+    for (let i = 0; i < 8; i++) {
+      const s = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 20, 4), spokeMat);
+      s.rotation.z = (i / 8) * Math.PI;
+      spokeGroup.add(s);
+    }
+    scene.add(spokeGroup);
+
+    const N   = 700;
+    const pos = new Float32Array(N * 3);
+    const vel = new Float32Array(N * 3);
+    const col = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) {
+      const i3 = i * 3;
+      pos[i3]   = (Math.random() - 0.5) * 160;
+      pos[i3+1] = (Math.random() - 0.5) * 100;
+      pos[i3+2] = (Math.random() - 0.5) * 80 - 20;
+      vel[i3]   = (Math.random() - 0.5) * 0.015;
+      vel[i3+1] = Math.random() * 0.02 + 0.005;
+      vel[i3+2] = (Math.random() - 0.5) * 0.01;
+      const t = Math.random();
+      if (t < 0.5)      { col[i3]=0.85+Math.random()*0.15; col[i3+1]=0.55+Math.random()*0.3; col[i3+2]=0.05+Math.random()*0.2; }
+      else if (t < 0.8) { col[i3]=0.9+Math.random()*0.1; col[i3+1]=0.8+Math.random()*0.2; col[i3+2]=0.3+Math.random()*0.3; }
+      else               { col[i3]=0.95; col[i3+1]=0.95; col[i3+2]=0.95; }
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    pGeo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+    const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({
+      size: 0.8, vertexColors: true, transparent: true, opacity: 0.85,
+      sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    scene.add(particles);
+
+    const stPos = new Float32Array(300 * 3);
+    for (let i = 0; i < 300; i++) {
+      stPos[i*3]   = (Math.random()-0.5)*300;
+      stPos[i*3+1] = (Math.random()-0.5)*200;
+      stPos[i*3+2] = -60 - Math.random()*100;
+    }
+    const stGeo = new THREE.BufferGeometry();
+    stGeo.setAttribute('position', new THREE.BufferAttribute(stPos, 3));
+    scene.add(new THREE.Points(stGeo, new THREE.PointsMaterial({
+      size:0.3, color:0xffffff, transparent:true, opacity:0.5,
+      sizeAttenuation:true, blending:THREE.AdditiveBlending, depthWrite:false,
+    })));
+
+    let frame = 0;
+    const posAttr = pGeo.attributes.position;
+    function animate() {
+      requestAnimationFrame(animate);
+      frame++;
+      chakra.rotation.z    += 0.0025; chakra.rotation.x    += 0.0008;
+      innerRing.rotation.z -= 0.004;  innerRing.rotation.y += 0.001;
+      spokeGroup.rotation.z += 0.0025;
+      outerRing.rotation.z  -= 0.001; outerRing.rotation.x += 0.0005;
+      goldLight.intensity = 2.5 + Math.sin(frame * 0.02) * 1.0;
+      for (let i = 0; i < N; i++) {
+        const i3 = i*3;
+        posAttr.array[i3]   += vel[i3];
+        posAttr.array[i3+1] += vel[i3+1];
+        posAttr.array[i3+2] += vel[i3+2];
+        if (posAttr.array[i3+1] > 50)  posAttr.array[i3+1] = -50;
+        if (posAttr.array[i3]   > 80)  posAttr.array[i3]   = -80;
+        if (posAttr.array[i3]   < -80) posAttr.array[i3]   =  80;
+      }
+      posAttr.needsUpdate = true;
+      camera.position.x = Math.sin(frame * 0.003) * 3;
+      camera.position.y = Math.cos(frame * 0.002) * 2;
+      camera.lookAt(0,0,0);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  })();
+});
 </script>
 
 <!-- APP LOGIC -->
@@ -400,35 +461,111 @@ body {
   let activeSessionEl  = null;
   let currentLang      = localStorage.getItem('arjun_lang') || 'en';
 
+  // ── Language config ──────────────────────────────────────────────────────
+  // srLang  = SpeechRecognition language code
+  // ttsLang = SpeechSynthesis language code
+  // voices  = preferred TTS voice name substrings (tried in order, then fallback by lang code)
   const LANGUAGES = {
-    en: { name:'English',  flag:'🇬🇧', srLang:'en-IN', ttsLang:'en-GB',
-          voices:['Google UK English Male','Microsoft George','Daniel','Arthur','Microsoft David','Microsoft Mark','Google US English'] },
-    hi: { name:'हिंदी',   flag:'🇮🇳', srLang:'hi-IN', ttsLang:'hi-IN',
-          voices:['Google हिन्दी','Microsoft Hemant','Lekha','Ravi','Microsoft Kalpana'] },
-    bn: { name:'বাংলা',   flag:'🇧🇩', srLang:'bn-IN', ttsLang:'bn-IN',
+    en: { name:'English',     flag:'🇬🇧', srLang:'en-IN', ttsLang:'en-GB',
+          voices:['Google UK English Male','Microsoft George','Daniel','Arthur','Microsoft David'] },
+    hi: { name:'हिंदी',      flag:'🇮🇳', srLang:'hi-IN', ttsLang:'hi-IN',
+          voices:['Google हिन्दी','Microsoft Hemant','Lekha','Ravi'] },
+    bn: { name:'বাংলা',      flag:'🇮🇳', srLang:'bn-IN', ttsLang:'bn-IN',
           voices:['Google বাংলা','Bangla India'] },
-    ta: { name:'தமிழ்',  flag:'🇮🇳', srLang:'ta-IN', ttsLang:'ta-IN',
+    ta: { name:'தமிழ்',     flag:'🇮🇳', srLang:'ta-IN', ttsLang:'ta-IN',
           voices:['Google தமிழ்','Tamil India','Latha'] },
-    te: { name:'తెలుగు', flag:'🇮🇳', srLang:'te-IN', ttsLang:'te-IN',
+    te: { name:'తెలుగు',    flag:'🇮🇳', srLang:'te-IN', ttsLang:'te-IN',
           voices:['Google తెలుగు','Telugu India'] },
-    mr: { name:'मराठी',   flag:'🇮🇳', srLang:'mr-IN', ttsLang:'mr-IN',
+    mr: { name:'मराठी',      flag:'🇮🇳', srLang:'mr-IN', ttsLang:'mr-IN',
           voices:['Google मराठी','Marathi India'] },
-    es: { name:'Español', flag:'🇪🇸', srLang:'es-ES', ttsLang:'es-ES',
-          voices:['Google español de Estados Unidos','Mónica','Jorge','Diego','Microsoft Pablo'] },
-    fr: { name:'Français',flag:'🇫🇷', srLang:'fr-FR', ttsLang:'fr-FR',
-          voices:['Google français','Thomas','Amelie','Microsoft Paul - French'] },
-    de: { name:'Deutsch', flag:'🇩🇪', srLang:'de-DE', ttsLang:'de-DE',
-          voices:['Google Deutsch','Anna','Markus','Microsoft Stefan - German'] },
-    ja: { name:'日本語',   flag:'🇯🇵', srLang:'ja-JP', ttsLang:'ja-JP',
+    gu: { name:'ગુજરાતી',   flag:'🇮🇳', srLang:'gu-IN', ttsLang:'gu-IN',
+          voices:['Google ગુજરાતી','Gujarati India'] },
+    kn: { name:'ಕನ್ನಡ',    flag:'🇮🇳', srLang:'kn-IN', ttsLang:'kn-IN',
+          voices:['Google ಕನ್ನಡ','Kannada India'] },
+    ml: { name:'മലയാളം',   flag:'🇮🇳', srLang:'ml-IN', ttsLang:'ml-IN',
+          voices:['Google മലയാളം','Malayalam India'] },
+    pa: { name:'ਪੰਜਾਬੀ',   flag:'🇮🇳', srLang:'pa-IN', ttsLang:'pa-IN',
+          voices:['Google ਪੰਜਾਬੀ','Punjabi India'] },
+    or: { name:'ଓଡ଼ିଆ',    flag:'🇮🇳', srLang:'or-IN', ttsLang:'or-IN',  voices:[] },
+    as: { name:'অসমীয়া',  flag:'🇮🇳', srLang:'as-IN', ttsLang:'as-IN',  voices:[] },
+    ur: { name:'اردو',      flag:'🇵🇰', srLang:'ur-PK', ttsLang:'ur-PK',
+          voices:['Microsoft Rizwan','Urdu Pakistan'] },
+    ne: { name:'नेपाली',    flag:'🇳🇵', srLang:'ne-NP', ttsLang:'ne-NP',  voices:[] },
+    si: { name:'සිංහල',    flag:'🇱🇰', srLang:'si-LK', ttsLang:'si-LK',  voices:[] },
+    zh: { name:'中文',       flag:'🇨🇳', srLang:'zh-CN', ttsLang:'zh-CN',
+          voices:['Google 普通话（中国大陆）','Microsoft Huihui','Ting-Ting'] },
+    ja: { name:'日本語',     flag:'🇯🇵', srLang:'ja-JP', ttsLang:'ja-JP',
           voices:['Google 日本語','Kyoko','Otoya','Microsoft Ichiro'] },
+    ko: { name:'한국어',     flag:'🇰🇷', srLang:'ko-KR', ttsLang:'ko-KR',
+          voices:['Google 한국의','Microsoft Heami','Yuna'] },
+    th: { name:'ไทย',       flag:'🇹🇭', srLang:'th-TH', ttsLang:'th-TH',
+          voices:['Google ภาษาไทย','Kanya'] },
+    vi: { name:'Tiếng Việt',flag:'🇻🇳', srLang:'vi-VN', ttsLang:'vi-VN',
+          voices:['Google tiếng Việt','An'] },
+    id: { name:'Bahasa Indonesia',flag:'🇮🇩', srLang:'id-ID', ttsLang:'id-ID',
+          voices:['Google Bahasa Indonesia','Damayanti'] },
+    ms: { name:'Bahasa Melayu',flag:'🇲🇾', srLang:'ms-MY', ttsLang:'ms-MY',
+          voices:['Google Bahasa Melayu'] },
+    ar: { name:'العربية',   flag:'🇸🇦', srLang:'ar-SA', ttsLang:'ar-SA',
+          voices:['Google عربي','Microsoft Naayf'] },
+    fa: { name:'فارسی',     flag:'🇮🇷', srLang:'fa-IR', ttsLang:'fa-IR',
+          voices:['Google فارسی','Microsoft Ava'] },
+    he: { name:'עברית',     flag:'🇮🇱', srLang:'he-IL', ttsLang:'he-IL',
+          voices:['Google עברית','Carmit'] },
+    tr: { name:'Türkçe',    flag:'🇹🇷', srLang:'tr-TR', ttsLang:'tr-TR',
+          voices:['Google Türkçe','Yelda','Microsoft Tolga'] },
+    es: { name:'Español',   flag:'🇪🇸', srLang:'es-ES', ttsLang:'es-ES',
+          voices:['Google español de Estados Unidos','Mónica','Jorge','Microsoft Pablo'] },
+    fr: { name:'Français',  flag:'🇫🇷', srLang:'fr-FR', ttsLang:'fr-FR',
+          voices:['Google français','Thomas','Amelie','Microsoft Paul'] },
+    de: { name:'Deutsch',   flag:'🇩🇪', srLang:'de-DE', ttsLang:'de-DE',
+          voices:['Google Deutsch','Anna','Markus','Microsoft Stefan'] },
+    it: { name:'Italiano',  flag:'🇮🇹', srLang:'it-IT', ttsLang:'it-IT',
+          voices:['Google italiano','Alice','Luca','Microsoft Cosimo'] },
+    pt: { name:'Português', flag:'🇵🇹', srLang:'pt-PT', ttsLang:'pt-PT',
+          voices:['Google português do Brasil','Joana','Microsoft Helia'] },
+    ru: { name:'Русский',   flag:'🇷🇺', srLang:'ru-RU', ttsLang:'ru-RU',
+          voices:['Google русский','Milena','Yuri','Microsoft Irina'] },
+    nl: { name:'Nederlands',flag:'🇳🇱', srLang:'nl-NL', ttsLang:'nl-NL',
+          voices:['Google Nederlands','Ellen','Microsoft Frank'] },
+    pl: { name:'Polski',    flag:'🇵🇱', srLang:'pl-PL', ttsLang:'pl-PL',
+          voices:['Google polski','Zosia','Microsoft Paulina'] },
+    sv: { name:'Svenska',   flag:'🇸🇪', srLang:'sv-SE', ttsLang:'sv-SE',
+          voices:['Google svenska','Alva','Microsoft Bengt'] },
+    no: { name:'Norsk',     flag:'🇳🇴', srLang:'nb-NO', ttsLang:'nb-NO',
+          voices:['Google norsk Bokmål','Nora','Microsoft Jon'] },
+    da: { name:'Dansk',     flag:'🇩🇰', srLang:'da-DK', ttsLang:'da-DK',
+          voices:['Google dansk','Sara','Microsoft Helle'] },
+    fi: { name:'Suomi',     flag:'🇫🇮', srLang:'fi-FI', ttsLang:'fi-FI',
+          voices:['Google suomi','Satu','Microsoft Heidi'] },
+    el: { name:'Ελληνικά', flag:'🇬🇷', srLang:'el-GR', ttsLang:'el-GR',
+          voices:['Google ελληνικά','Melina','Microsoft Stefanos'] },
+    ro: { name:'Română',    flag:'🇷🇴', srLang:'ro-RO', ttsLang:'ro-RO',
+          voices:['Google română','Ioana','Microsoft Andrei'] },
+    cs: { name:'Čeština',   flag:'🇨🇿', srLang:'cs-CZ', ttsLang:'cs-CZ',
+          voices:['Google čeština','Zuzana','Microsoft Jakub'] },
+    hu: { name:'Magyar',    flag:'🇭🇺', srLang:'hu-HU', ttsLang:'hu-HU',
+          voices:['Google magyar','Mariska','Microsoft Szabolcs'] },
+    uk: { name:'Українська',flag:'🇺🇦', srLang:'uk-UA', ttsLang:'uk-UA',
+          voices:['Google українська','Lesya'] },
+    sr: { name:'Српски',    flag:'🇷🇸', srLang:'sr-RS', ttsLang:'sr-RS',  voices:[] },
+    hr: { name:'Hrvatski',  flag:'🇭🇷', srLang:'hr-HR', ttsLang:'hr-HR',  voices:[] },
+    sk: { name:'Slovenčina',flag:'🇸🇰', srLang:'sk-SK', ttsLang:'sk-SK',
+          voices:['Laura'] },
+    bg: { name:'Български', flag:'🇧🇬', srLang:'bg-BG', ttsLang:'bg-BG',  voices:[] },
+    sw: { name:'Kiswahili', flag:'🇰🇪', srLang:'sw-KE', ttsLang:'sw-KE',  voices:[] },
+    af: { name:'Afrikaans', flag:'🇿🇦', srLang:'af-ZA', ttsLang:'af-ZA',
+          voices:['Microsoft Kobus'] },
   };
 
+  // ── Utilities ─────────────────────────────────────────────────────────────
   function escapeHtml(text) {
     const d = document.createElement('div');
     d.textContent = text;
     return d.innerHTML;
   }
 
+  // ── Init ──────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('user-initial').textContent  = userName.charAt(0).toUpperCase();
     document.getElementById('sidebar-story').textContent = mahabharataStory.substring(0, 500) + '…';
@@ -440,77 +577,87 @@ body {
     }
   });
 
+  // ── Language picker ───────────────────────────────────────────────────────
   function toggleLangDropdown() {
     if (isTyping) {
-      alert('⏳ Wait for Arjun to finish responding before changing language');
+      showToast('⏳ Wait for Arjun to finish responding', '#8866cc');
       return;
     }
     document.getElementById('langDropdown').classList.toggle('open');
   }
+
   document.addEventListener('click', (e) => {
     const wrapper = document.getElementById('langWrapper');
-    if (wrapper && !wrapper.contains(e.target))
+    if (wrapper && !wrapper.contains(e.target)) {
       document.getElementById('langDropdown').classList.remove('open');
+    }
+    // Close sidebar on mobile tap outside
     const sidebar = document.getElementById('sidebar');
     const menuBtn = document.querySelector('.menu-btn');
-    if (window.innerWidth <= 768 && sidebar && !sidebar.contains(e.target) && menuBtn && !menuBtn.contains(e.target))
+    if (window.innerWidth <= 768 && sidebar && menuBtn &&
+        !sidebar.contains(e.target) && !menuBtn.contains(e.target)) {
       sidebar.classList.remove('open');
+    }
   });
 
   function setLanguage(lang) {
-    if (lang === currentLang) return;
-    
-    // Trigger animation on button
-    const btn = document.querySelector('.lang-btn');
-    btn.classList.add('switching');
-    setTimeout(() => btn.classList.remove('switching'), 400);
-    
-    // Stop any ongoing speech
-    window.speechSynthesis && window.speechSynthesis.cancel();
-    
-    // Update state
+    const cfg = LANGUAGES[lang];
+    if (!cfg) return;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     currentLang = lang;
     localStorage.setItem('arjun_lang', lang);
     applyLanguage(lang, true);
-    
-    // Close dropdown
     document.getElementById('langDropdown').classList.remove('open');
+    const btn = document.querySelector('.lang-btn');
+    btn.classList.add('switching');
+    setTimeout(() => btn.classList.remove('switching'), 400);
   }
 
-  function applyLanguage(lang, showToast) {
+  function applyLanguage(lang, showNotif) {
     const cfg = LANGUAGES[lang] || LANGUAGES['en'];
-    document.getElementById('langLabel').textContent = cfg.name;
+    document.getElementById('langLabel').textContent = cfg.flag + ' ' + cfg.name;
     document.querySelectorAll('.lang-option').forEach(el => {
       el.classList.toggle('active', el.dataset.lang === lang);
     });
-    if (showToast) showLangToast(cfg.flag + ' ' + cfg.name);
+    if (showNotif) showToast('Language: ' + cfg.flag + ' ' + cfg.name, 'rgba(212,160,23,0.95)', '#1a0a00');
   }
 
-  function showLangToast(text) {
-    let t = document.getElementById('lang-toast');
+  function showToast(text, bg, color) {
+    bg    = bg    || 'rgba(212,160,23,0.95)';
+    color = color || '#1a0a00';
+    let t = document.getElementById('app-toast');
     if (!t) {
       t = document.createElement('div');
-      t.id = 'lang-toast';
-      t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);' +
-        'background:rgba(212,160,23,0.95);color:#1a0a00;padding:8px 18px;' +
-        'border-radius:20px;font-size:13px;font-weight:600;font-family:"DM Sans",sans-serif;' +
-        'z-index:9999;box-shadow:0 4px 20px rgba(212,160,23,0.4);' +
-        'transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);' +
-        'opacity:0;transform:translateX(-50%) translateY(20px);';
+      t.id = 'app-toast';
+      Object.assign(t.style, {
+        position:'fixed', bottom:'80px', left:'50%',
+        transform:'translateX(-50%) translateY(20px)',
+        padding:'8px 18px', borderRadius:'20px',
+        fontSize:'13px', fontWeight:'600',
+        fontFamily:'"DM Sans",sans-serif',
+        zIndex:'9999',
+        boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+        transition:'all 0.3s cubic-bezier(0.34,1.56,0.64,1)',
+        opacity:'0', whiteSpace:'nowrap'
+      });
       document.body.appendChild(t);
     }
-    t.textContent = 'Language: ' + text;
-    // Trigger slide-in animation
-    t.offsetHeight; // Force reflow
-    t.style.opacity = '1';
-    t.style.transform = 'translateX(-50%) translateY(0)';
+    t.textContent       = text;
+    t.style.background  = bg;
+    t.style.color       = color;
+    t.style.opacity     = '0';
+    t.style.transform   = 'translateX(-50%) translateY(20px)';
+    t.offsetHeight; // reflow
+    t.style.opacity     = '1';
+    t.style.transform   = 'translateX(-50%) translateY(0)';
     clearTimeout(t._timer);
-    t._timer = setTimeout(() => { 
-      t.style.opacity = '0';
+    t._timer = setTimeout(() => {
+      t.style.opacity   = '0';
       t.style.transform = 'translateX(-50%) translateY(20px)';
     }, 2500);
   }
 
+  // ── Sidebar / voice ───────────────────────────────────────────────────────
   function toggleSidebar() {
     document.getElementById('sidebar').classList.toggle('open');
   }
@@ -520,11 +667,12 @@ body {
     const btn = document.getElementById('voiceToggle');
     btn.textContent = voiceEnabled ? '🔊 Voice' : '🔇 Muted';
     btn.classList.toggle('muted', !voiceEnabled);
-    if (!voiceEnabled) window.speechSynthesis.cancel();
+    if (!voiceEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
   }
 
+  // ── New Chat ──────────────────────────────────────────────────────────────
   function newChat() {
-    window.speechSynthesis && window.speechSynthesis.cancel();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
     const wrap = document.getElementById('messages');
     wrap.innerHTML = '';
     const d = document.createElement('div');
@@ -541,6 +689,7 @@ body {
     if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
   }
 
+  // ── History ───────────────────────────────────────────────────────────────
   async function loadHistory() {
     try {
       const res  = await fetch('/api/conversations');
@@ -548,45 +697,53 @@ body {
       allHistory = data.conversations || [];
       renderConvList();
       if (allHistory.length > 0) {
-        const last = allHistory[allHistory.length-1];
+        const last = allHistory[allHistory.length - 1];
         if (last.messages && last.messages.length > 0) {
           currentSessionId = last.session_id || String(Date.now());
           activeSessionEl  = last.session_id;
           const intro = document.getElementById('intro-section');
           if (intro) intro.style.display = 'none';
-          last.messages.forEach(m => { addMessage('user',m.user,m.timestamp); addMessage('arjun',m.arjun,m.timestamp); });
+          last.messages.forEach(m => {
+            addMessage('user',  m.user,  m.timestamp);
+            addMessage('arjun', m.arjun, m.timestamp);
+          });
         }
       }
-    } catch(e) { console.error('loadHistory error:',e); }
+    } catch (e) { console.error('loadHistory error:', e); }
   }
 
   function syncLocalHistory(userMsg, arjunReply) {
-    const ts = new Date().toISOString();
-    const entry = { user:userMsg, arjun:arjunReply, timestamp:ts };
+    const ts    = new Date().toISOString();
+    const entry = { user: userMsg, arjun: arjunReply, timestamp: ts };
     const existing = allHistory.find(g => g.session_id === currentSessionId);
     if (existing) {
       existing.messages.push(entry);
     } else {
-      const label = new Date().toLocaleString('en-IN',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      allHistory.push({ session_id:currentSessionId, label, date:ts.slice(0,10), messages:[entry] });
+      const label = new Date().toLocaleString('en-IN', {
+        month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'
+      });
+      allHistory.push({ session_id: currentSessionId, label, date: ts.slice(0,10), messages:[entry] });
     }
     renderConvList(currentSessionId);
   }
 
-  function renderConvList(highlightSessionId=null) {
+  function renderConvList(highlightSessionId = null) {
     const list = document.getElementById('conv-list');
-    if (!allHistory || allHistory.length===0) {
-      list.innerHTML = '<div class="conv-empty">No conversations yet</div>'; return;
+    if (!allHistory || allHistory.length === 0) {
+      list.innerHTML = '<div class="conv-empty">No conversations yet</div>';
+      return;
     }
     list.innerHTML = '';
-    [...allHistory].reverse().forEach((conv,i) => {
-      const item = document.createElement('div');
+    [...allHistory].reverse().forEach((conv, i) => {
+      const item     = document.createElement('div');
       item.className = 'conv-item';
-      const isActive = highlightSessionId ? conv.session_id===highlightSessionId : i===0;
+      const isActive = highlightSessionId ? conv.session_id === highlightSessionId : i === 0;
       if (isActive) item.classList.add('active');
-      const previewText = escapeHtml((conv.messages[0]?.user||'Conversation').substring(0,38));
-      const labelText   = escapeHtml(conv.label||conv.date||conv.session_id);
-      const sid         = escapeHtml(conv.session_id||('date:'+conv.date));
+
+      const previewText = escapeHtml((conv.messages[0]?.user || 'Conversation').substring(0, 38));
+      const labelText   = escapeHtml(conv.label || conv.date || conv.session_id);
+      const sid         = escapeHtml(conv.session_id || ('date:' + conv.date));
+
       item.innerHTML = `
         <div class="conv-dot">💬</div>
         <div class="conv-meta" style="flex:1;min-width:0;">
@@ -595,14 +752,18 @@ body {
         </div>
         <div style="display:flex;align-items:center;gap:6px;">
           <div class="conv-count">${conv.messages.length}</div>
-          <button class="conv-delete-btn" title="Delete" onclick="deleteConversation(event,'${sid}',this)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+          <button class="conv-delete-btn" title="Delete conversation"
+            onclick="deleteConversation(event,'${sid}',this)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4h6v2"/>
             </svg>
           </button>
         </div>`;
-      item.addEventListener('click', () => loadConversation(conv,item));
+      item.addEventListener('click', () => loadConversation(conv, item));
       list.appendChild(item);
     });
   }
@@ -614,45 +775,107 @@ body {
     activeSessionEl  = conv.session_id;
     const wrap = document.getElementById('messages');
     wrap.innerHTML = '';
-    conv.messages.forEach(m => { addMessage('user',m.user,m.timestamp); addMessage('arjun',m.arjun,m.timestamp); });
+    conv.messages.forEach(m => {
+      addMessage('user',  m.user,  m.timestamp);
+      addMessage('arjun', m.arjun, m.timestamp);
+    });
     scrollBottom();
-    if (window.innerWidth<=768) document.getElementById('sidebar').classList.remove('open');
+    if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open');
   }
 
   async function deleteConversation(event, date, btnEl) {
     event.stopPropagation();
     if (!confirm('Delete this conversation?\nThis cannot be undone.')) return;
+    // Optimistic update
     allHistory = allHistory.filter(g => g.session_id !== date);
     renderConvList();
-    if (activeSessionEl===date || currentSessionId===date) newChat();
+    if (activeSessionEl === date || currentSessionId === date) newChat();
     try {
-      const res  = await fetch('/api/conversations/'+encodeURIComponent(date), { method:'DELETE' });
+      const res  = await fetch('/api/conversations/' + encodeURIComponent(date), { method: 'DELETE' });
       const data = await res.json();
-      if (!data.success) { console.error('Delete failed:',data.error); await loadHistory(); }
-    } catch(e) { console.error('Delete error:',e); await loadHistory(); }
+      if (!data.success) {
+        console.error('Delete failed:', data.error);
+        await loadHistory(); // re-sync if server rejected
+      }
+    } catch (e) {
+      console.error('Delete error:', e);
+      await loadHistory();
+    }
   }
 
+  // ── Message sending ───────────────────────────────────────────────────────
   function sendSuggestion(text) {
     document.getElementById('user-input').value = text;
     sendMessage();
   }
 
   function handleKey(e) {
-    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   }
 
   function autoResize(el) {
-    el.style.height='auto';
-    el.style.height = Math.min(el.scrollHeight,140)+'px';
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 140) + 'px';
   }
 
+  async function sendMessage() {
+    const input = document.getElementById('user-input');
+    const msg   = input.value.trim();
+    if (!msg || isTyping) return;
+
+    const intro = document.getElementById('intro-section');
+    if (intro) intro.style.display = 'none';
+
+    addMessage('user', msg);
+    input.value = ''; input.style.height = 'auto';
+    isTyping = true;
+    document.getElementById('send-btn').disabled = true;
+    document.getElementById('arjun-status-text').textContent = 'Contemplating…';
+    const typingEl = addTyping();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body   : JSON.stringify({ message: msg, session_id: currentSessionId, language: currentLang })
+      });
+
+      if (res.status === 401) {
+        typingEl.remove();
+        addMessage('arjun', 'Your session has expired. Please log in again 🙏');
+        setTimeout(() => { window.location.href = '/login'; }, 2500);
+        isTyping = false;
+        document.getElementById('send-btn').disabled = false;
+        document.getElementById('arjun-status-text').textContent = 'Awaiting your question';
+        return;
+      }
+
+      const data  = await res.json();
+      typingEl.remove();
+      const reply = data.reply || 'Something went wrong.';
+      addMessage('arjun', reply);
+      speak(reply);
+      if (res.ok) syncLocalHistory(msg, reply);
+    } catch (e) {
+      typingEl.remove();
+      addMessage('arjun', 'The connection to Kurukshetra was lost. Please try again 🙏');
+    }
+
+    isTyping = false;
+    document.getElementById('send-btn').disabled = false;
+    document.getElementById('arjun-status-text').textContent = 'Awaiting your question';
+    scrollBottom();
+  }
+
+  // ── Voice input ───────────────────────────────────────────────────────────
   function startVoice() {
-    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRec) {
       alert('Voice input not supported in this browser. Try Chrome.'); return;
     }
     const btn = document.getElementById('voiceBtn');
-    const rec = new (window.SpeechRecognition||window.webkitSpeechRecognition)();
-    const cfg = LANGUAGES[currentLang]||LANGUAGES['en'];
+    const rec = new SpeechRec();
+    const cfg = LANGUAGES[currentLang] || LANGUAGES['en'];
     rec.lang           = cfg.srLang;
     rec.interimResults = false;
     rec.onstart  = () => btn.classList.add('listening');
@@ -665,34 +888,50 @@ body {
     };
     rec.onerror = (e) => {
       btn.classList.remove('listening');
-      if (e.error!=='no-speech') alert('Voice recognition failed. Please try again.');
+      if (e.error !== 'no-speech') alert('Voice recognition failed. Please try again.');
     };
     rec.start();
   }
 
+  // ── Voice output ──────────────────────────────────────────────────────────
   function speak(text) {
     if (!voiceEnabled || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const cfg = LANGUAGES[currentLang]||LANGUAGES['en'];
+    const cfg = LANGUAGES[currentLang] || LANGUAGES['en'];
+
+    // Strip Sanskrit devanagari from English TTS
     let spokenText = text;
-    if (currentLang==='en') spokenText = text.replace(/[\u0900-\u097F]+/g,'').replace(/\s+/g,' ').trim();
+    if (currentLang === 'en') spokenText = text.replace(/[\u0900-\u097F]+/g, '').replace(/\s+/g, ' ').trim();
     if (!spokenText) return;
-    const utt = new SpeechSynthesisUtterance(spokenText);
+
+    const utt  = new SpeechSynthesisUtterance(spokenText);
     utt.lang   = cfg.ttsLang;
     utt.volume = 1;
-    if (currentLang==='en')             { utt.rate=0.78; utt.pitch=0.0; }
-    else if (['hi','mr'].includes(currentLang)) { utt.rate=0.82; utt.pitch=0.1; }
-    else if (['bn','ta','te'].includes(currentLang)) { utt.rate=0.85; utt.pitch=0.15; }
-    else                                { utt.rate=0.82; utt.pitch=0.1; }
 
+    // Rate / pitch tuned per language family
+    const rateMap = { en:0.78, hi:0.82, mr:0.82, bn:0.85, ta:0.85, te:0.85, kn:0.85, ml:0.85,
+                      gu:0.83, pa:0.83, or:0.83, as:0.83, ur:0.82, ne:0.82, si:0.82,
+                      zh:0.80, ja:0.80, ko:0.82, th:0.85, vi:0.85, id:0.88, ms:0.88,
+                      ar:0.80, fa:0.80, he:0.82, tr:0.85,
+                      es:0.90, fr:0.88, de:0.85, it:0.88, pt:0.88, ru:0.82, nl:0.87,
+                      pl:0.85, sv:0.87, no:0.87, da:0.87, fi:0.85, el:0.85, ro:0.85,
+                      cs:0.85, hu:0.85, uk:0.82, sr:0.85, hr:0.85, sk:0.85, bg:0.85,
+                      sw:0.87, af:0.87 };
+    utt.rate  = rateMap[currentLang] || 0.82;
+    utt.pitch = (currentLang === 'ja' || currentLang === 'zh') ? 0.1 : 0.05;
+
+    // Voice selection: named → lang code → lang prefix
     const voices = window.speechSynthesis.getVoices();
     let selected = null;
-    for (const name of cfg.voices) {
+    for (const name of (cfg.voices || [])) {
       selected = voices.find(v => v.name.includes(name));
       if (selected) break;
     }
-    if (!selected) selected = voices.find(v => v.lang===cfg.ttsLang);
-    if (!selected) selected = voices.find(v => v.lang.startsWith(cfg.ttsLang.split('-')[0]));
+    if (!selected) selected = voices.find(v => v.lang === cfg.ttsLang);
+    if (!selected) {
+      const prefix = cfg.ttsLang.split('-')[0];
+      selected = voices.find(v => v.lang.startsWith(prefix));
+    }
     if (selected) utt.voice = selected;
 
     utt.onstart = () => { document.getElementById('arjun-status-text').textContent = 'Speaking…'; };
@@ -700,63 +939,23 @@ body {
     window.speechSynthesis.speak(utt);
   }
 
-  async function sendMessage() {
-    const input = document.getElementById('user-input');
-    const msg   = input.value.trim();
-    if (!msg || isTyping) return;
-    const intro = document.getElementById('intro-section');
-    if (intro) intro.style.display = 'none';
-    addMessage('user', msg);
-    input.value=''; input.style.height='auto';
-    isTyping=true;
-    document.getElementById('send-btn').disabled=true;
-    document.getElementById('arjun-status-text').textContent='Contemplating…';
-    const typingEl = addTyping();
-    try {
-      const res = await fetch('/api/chat', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ message:msg, session_id:currentSessionId, language:currentLang })
-      });
-      if (!res.ok && res.status===401) {
-        typingEl.remove();
-        addMessage('arjun','Your session has expired. Please log in again 🙏');
-        setTimeout(()=>{ window.location.href='/login'; },2500);
-        isTyping=false; document.getElementById('send-btn').disabled=false;
-        document.getElementById('arjun-status-text').textContent='Awaiting your question';
-        return;
-      }
-      const data  = await res.json();
-      typingEl.remove();
-      const reply = data.reply||'Something went wrong.';
-      addMessage('arjun', reply);
-      speak(reply);
-      if (res.ok) syncLocalHistory(msg, reply);
-    } catch(e) {
-      typingEl.remove();
-      addMessage('arjun','The connection to Kurukshetra was lost. Please try again 🙏');
-    }
-    isTyping=false;
-    document.getElementById('send-btn').disabled=false;
-    document.getElementById('arjun-status-text').textContent='Awaiting your question';
-    scrollBottom();
-  }
-
-  function addMessage(role, text, isoTimestamp=null) {
-    const isArjun = role==='arjun';
-    const _d = isoTimestamp ? new Date(isoTimestamp) : new Date();
-    const d  = (_d instanceof Date && !isNaN(_d)) ? _d : new Date();
-    const time = d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  // ── DOM helpers ───────────────────────────────────────────────────────────
+  function addMessage(role, text, isoTimestamp = null) {
+    const isArjun = role === 'arjun';
+    const _d  = isoTimestamp ? new Date(isoTimestamp) : new Date();
+    const d   = (_d instanceof Date && !isNaN(_d)) ? _d : new Date();
+    const time = d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
     let safeText = escapeHtml(text);
-    if (isArjun) safeText = safeText.replace(/([\u0900-\u097F][^\n<]*)/g,'<div class="shloka-box">$1</div>');
+    // Wrap devanagari lines in shloka box for Arjun messages
+    if (isArjun) safeText = safeText.replace(/([\u0900-\u097F][^\n<]*)/g, '<div class="shloka-box">$1</div>');
     const msgDiv = document.getElementById('messages');
     const div    = document.createElement('div');
-    div.className = 'message '+role;
+    div.className = 'message ' + role;
     div.innerHTML = `
-      <div class="msg-avatar ${role}">${isArjun?'🏹':escapeHtml(userName.charAt(0).toUpperCase())}</div>
+      <div class="msg-avatar ${role}">${isArjun ? '🏹' : escapeHtml(userName.charAt(0).toUpperCase())}</div>
       <div class="msg-content">
         <div class="msg-bubble">${safeText}</div>
-        <div class="msg-time">${isArjun?'Arjun':'You'} · ${escapeHtml(time)}</div>
+        <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${escapeHtml(time)}</div>
       </div>`;
     msgDiv.appendChild(div);
     scrollBottom();
@@ -765,8 +964,8 @@ body {
   function addTyping() {
     const wrap = document.getElementById('messages');
     const div  = document.createElement('div');
-    div.className='message arjun';
-    div.innerHTML=`<div class="msg-avatar arjun">🏹</div>
+    div.className = 'message arjun';
+    div.innerHTML = `<div class="msg-avatar arjun">🏹</div>
       <div class="msg-content"><div class="typing-indicator">
         <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
       </div></div>`;
@@ -781,8 +980,8 @@ body {
   }
 
   async function doLogout() {
-    try { await fetch('/logout',{method:'POST'}); } catch(e){}
-    window.location.href='/';
+    try { await fetch('/logout', { method: 'POST' }); } catch (e) {}
+    window.location.href = '/';
   }
 </script>
 </body>
