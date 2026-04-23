@@ -88,12 +88,16 @@ body {
 .lang-btn:hover { background: rgba(212,160,23,0.2); border-color: rgba(212,160,23,0.5); }
 
 .lang-dropdown {
-  display: none; position: absolute; top: calc(100% + 8px); right: 0;
-  background: rgba(10,5,25,0.97); backdrop-filter: blur(20px);
+  display: none;
+  /* position:fixed escapes the backdrop-filter stacking context on .chat-header
+     which was trapping the dropdown and blocking click events */
+  position: fixed;
+  background: rgba(10,5,25,0.98); backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(212,160,23,0.3); border-radius: 12px;
-  padding: 6px; min-width: 200px; z-index: 1000;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-  max-height: 70vh; overflow-y: auto;
+  padding: 6px; min-width: 210px; z-index: 9999;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.8);
+  max-height: 60vh; overflow-y: auto;
   scrollbar-width: thin; scrollbar-color: rgba(212,160,23,0.3) transparent;
 }
 .lang-dropdown::-webkit-scrollbar { width: 4px; }
@@ -210,7 +214,9 @@ body {
         <button class="lang-btn" onclick="toggleLangDropdown()" title="Change language">
           <span>🌐</span><span id="langLabel">English</span><span style="font-size:10px;margin-left:2px;">▾</span>
         </button>
-        <div class="lang-dropdown" id="langDropdown">
+      </div>
+      <!-- lang-dropdown lives at body root to escape backdrop-filter stacking context -->
+      <div class="lang-dropdown" id="langDropdown">
 
           <!-- Indian Languages -->
           <div class="lang-group-label">🇮🇳 Indian Languages</div>
@@ -285,7 +291,6 @@ body {
           <div class="lang-option" data-lang="af"  onclick="event.stopPropagation();setLanguage('af')"><span class="flag">🇿🇦</span> Afrikaans</div>
 
         </div>
-      </div>
       <a href="/help" class="help-link">Help</a>
     </div>
   </div>
@@ -583,13 +588,40 @@ document.getElementById('three-script').addEventListener('load', function() {
       showToast('⏳ Wait for Arjun to finish responding', '#8866cc');
       return;
     }
-    document.getElementById('langDropdown').classList.toggle('open');
+    const dropdown = document.getElementById('langDropdown');
+    const btn      = document.querySelector('.lang-btn');
+    const isOpen   = dropdown.classList.contains('open');
+
+    if (isOpen) {
+      dropdown.classList.remove('open');
+      return;
+    }
+
+    // Use getBoundingClientRect + position:fixed to fully escape the
+    // backdrop-filter stacking context on .chat-header that was blocking clicks
+    const rect   = btn.getBoundingClientRect();
+    const dropW  = 210;
+    const leftPos = Math.max(4, rect.right - dropW);
+    dropdown.style.top  = (rect.bottom + 6) + 'px';
+    dropdown.style.left = leftPos + 'px';
+    dropdown.classList.add('open');
+
+    // Scroll active option into view
+    const active = dropdown.querySelector('.lang-option.active');
+    if (active) setTimeout(() => active.scrollIntoView({ block: 'nearest' }), 50);
   }
 
   document.addEventListener('click', (e) => {
-    const wrapper = document.getElementById('langWrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
-      document.getElementById('langDropdown').classList.remove('open');
+    // Close dropdown when clicking outside the button (dropdown itself is
+    // position:fixed so it is NOT inside langWrapper in the DOM flow)
+    const wrapper  = document.getElementById('langWrapper');
+    const dropdown = document.getElementById('langDropdown');
+    if (wrapper && dropdown) {
+      const outsideBtn      = !wrapper.contains(e.target);
+      const outsideDropdown = !dropdown.contains(e.target);
+      if (outsideBtn && outsideDropdown) {
+        dropdown.classList.remove('open');
+      }
     }
     // Close sidebar on mobile tap outside
     const sidebar = document.getElementById('sidebar');
