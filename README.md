@@ -1,998 +1,430 @@
-<<<<<<< HEAD
-# <div align="center">
+# Arjun AI 🏹
 
-# 
-=======
-<div align="center">
+> *"I am here to pass that same transformation to every person who comes to me with their battle."*
 
-<img src="https://img.shields.io/badge/GitaPath-Arjun%20AI-orange?style=for-the-badge&logo=hinduism" alt="GitaPath"/>
-
-# 🏹 GitaPath — Arjun AI
-
-### *Speak with Arjun. Find wisdom for your battle.*
-
-An AI-powered spiritual guide built on the Bhagavad Gita — embodying Arjun, the legendary warrior of Kurukshetra, powered by OpenRouter LLMs and deployed on Render.
-
-<br/>
-
-[![Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-arjun--ai.onrender.com-brightgreen?style=for-the-badge)](https://arjun-ai.onrender.com)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)](https://python.org)
-[![Flask](https://img.shields.io/badge/Flask-3.1.0-black?style=flat-square&logo=flask)](https://flask.palletsprojects.com)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat-square&logo=mongodb)](https://mongodb.com)
-[![Render](https://img.shields.io/badge/Deployed-Render-purple?style=flat-square&logo=render)](https://render.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-
-<br/>
-
-> *"कर्मण्येवाधिकारस्ते मा फलेषु कदाचन"*
-> "You have the right to act, but never to the fruits of action." — Gita 2.47
-
-</div>
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
-
-# <img src="https://img.shields.io/badge/GitaPath-Arjun%20AI-orange?style=for-the-badge\&logo=hinduism" alt="GitaPath"/>
-
-<<<<<<< HEAD
-# 
-
-# \# 🏹 GitaPath — Arjun AI
-=======
-## 📖 What is GitaPath?
-
-**GitaPath** is a full-stack AI web application where users can have a personal conversation with **Arjun** — the legendary warrior from the Mahabharata and the disciple of Lord Krishna. Arjun speaks using the timeless wisdom of all **18 chapters of the Bhagavad Gita**, applying it to real modern-day problems like stress, heartbreak, purpose, fear, and anger.
-
-This is not just another chatbot. Arjun has a personality, a history, and a soul. He stood on the battlefield of Kurukshetra ready to give up — and was transformed by Krishna's words. He now passes that same transformation to every user who comes with their battle.
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
-
-# 
-
-# \### \*Speak with Arjun. Find wisdom for your battle.\*
-
-<<<<<<< HEAD
-# 
-=======
-| Feature | Description |
-|---|---|
-| 🏹 **Arjun AI Chat** | Conversational AI that stays fully in character as Arjun — never breaks role |
-| 📜 **Bhagavad Gita Wisdom** | Quotes relevant Sanskrit shlokas with meaning in natural conversation |
-| 🔐 **Secure Auth System** | Register, Login, Logout with bcrypt-hashed passwords and session management |
-| 📧 **OTP Email Verification** | Email-based OTP for registration and password reset via Google Apps Script |
-| 🗂 **Conversation History** | All chats saved to MongoDB, grouped by date, viewable in sidebar |
-| 👤 **User Profile Page** | Shows total messages, sessions, and full conversation history |
-| 🔊 **Voice Input & Output** | Speak your question (Web Speech API) and hear Arjun's response |
-| 📱 **Mobile Responsive** | Fully responsive layout with collapsible sidebar for mobile |
-| 🌐 **Production Deployed** | Live on Render with Gunicorn, connected to MongoDB Atlas |
-| 🛡️ **Security Hardened** | Rate limiting, XSS protection, constant-time OTP comparison, no plaintext passwords |
+Arjun AI is a full-stack web application that lets you have a deeply personal conversation with **Arjun** — the legendary warrior of Kurukshetra — who answers your questions through the lens of the **Bhagavad Gita**. Powered by a large language model via OpenRouter, Arjun responds with empathy, relevant Sanskrit shlokas, and practical wisdom drawn from all 18 chapters of the Gita.
 
 ---
 
-## 🎯 Live Demo
+## Table of Contents
 
-👉 **[https://arjun-ai.onrender.com](https://arjun-ai.onrender.com)**
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Environment Variables](#environment-variables)
+- [Local Development](#local-development)
+- [Docker](#docker)
+- [Deploying to Render](#deploying-to-render)
+- [Email OTP Setup (Google Apps Script)](#email-otp-setup-google-apps-script)
+- [Running Tests](#running-tests)
+- [API Reference](#api-reference)
+- [Security Overview](#security-overview)
+- [Rate Limits](#rate-limits)
+- [Multi-language Support](#multi-language-support)
+- [License](#license)
 
-> ⚠️ Hosted on Render free tier — may take **30–60 seconds** to wake up on first visit.
+---
 
-**Try asking Arjun:**
-- *"I feel like giving up on everything"*
-- *"What does the Gita say about fear?"*
-- *"I am heartbroken and lost"*
-- *"Explain karma to me in simple words"*
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
+## Features
 
-# An AI-powered spiritual guide built on the Bhagavad Gita — embodying Arjun, the legendary warrior of Kurukshetra, powered by OpenRouter LLMs and deployed on Render.
+- 🧘 **AI persona chat** — Converse with Arjun who responds with Bhagavad Gita wisdom, Sanskrit shlokas, and modern-life guidance
+- 🔐 **Secure authentication** — Email + password registration with bcrypt hashing, OTP email verification, and "forgot password" flow
+- 🌐 **Multi-language responses** — Supports 50+ languages; Arjun replies in your chosen language while keeping Sanskrit shlokas in their original script
+- 📜 **Persistent conversation history** — Sessions are stored per user in MongoDB, grouped by session ID, and viewable in a profile dashboard
+- 🛡️ **Production-ready security** — CSRF protection, secure session cookies, HTTP security headers, and per-IP rate limiting on all sensitive endpoints
+- 🐳 **Docker support** — Ships with a `Dockerfile` and `docker-compose.yml` for one-command local dev with MongoDB included
+- 🚀 **Render-ready deployment** — Ships with a `Procfile` for Gunicorn; zero extra configuration needed
 
-# 
+---
 
-<<<<<<< HEAD
-# <br/>
-=======
-```
-┌─────────────────────────────────────────────────────────┐
-│                        Frontend                         │
-│         HTML5 · CSS3 · Vanilla JS · Web Speech API      │
-├─────────────────────────────────────────────────────────┤
-│                        Backend                          │
-│              Flask 3.1 · Python 3.10+ · Gunicorn        │
-├─────────────────────────────────────────────────────────┤
-│                       Database                          │
-│           MongoDB Atlas (pymongo) · TTL Indexes         │
-├─────────────────────────────────────────────────────────┤
-│                      AI / Email                         │
-│       OpenRouter API · Google Apps Script (Gmail)       │
-├─────────────────────────────────────────────────────────┤
-│                      Deployment                         │
-│                   Render (free tier)                    │
-└─────────────────────────────────────────────────────────┘
-```
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
+## Tech Stack
 
-# 
+| Layer | Technology |
+|---|---|
+| Web framework | Flask 3.1 (Blueprint architecture) |
+| Database | MongoDB (via PyMongo 4.16) |
+| AI backend | OpenRouter API (model-agnostic) |
+| Password hashing | bcrypt 4.0 |
+| Email OTP delivery | Google Apps Script webhook |
+| Production server | Gunicorn 23.0 |
+| Environment config | python-dotenv |
+| Testing | pytest + mongomock |
 
-# \[!\[Live Demo](https://img.shields.io/badge/🚀%20Live%20Demo-arjun--ai.onrender.com-brightgreen?style=for-the-badge)](https://arjun-ai.onrender.com)
+---
 
-<<<<<<< HEAD
-# \[!\[Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square\&logo=python)](https://python.org)
-=======
+## Project Structure
+
 ```
 Arjun-ai/
 │
-├── app.py                  # Main Flask application — all routes, auth, AI logic
-├── requirements.txt        # Python dependencies
-├── Procfile                # Gunicorn start command for Render
-├── .gitignore              # Excludes .env, __pycache__, venv
+├── app.py                          # Flask factory — wires blueprints together (60 lines)
+├── config.py                       # All environment variables and language registry
+├── extensions.py                   # MongoDB connection + structured logging setup
+│
+├── blueprints/                     # Route logic split by feature
+│   ├── auth/routes.py              # Login, register, forgot password, logout
+│   ├── chat/routes.py              # Chat page, /api/chat, /api/history
+│   ├── profile/routes.py           # Profile page, /api/profile, /api/conversations
+│   └── main/routes.py              # Index, help, privacy, CSRF token endpoint
+│
+├── utils/
+│   ├── security.py                 # CSRF, rate limiting, OTP helpers
+│   ├── email.py                    # OTP email dispatch via Google Apps Script
+│   └── history.py                  # Conversation grouping helpers
+│
+├── static/
+│   ├── style.css                   # Global stylesheet (CSS variables throughout)
+│   └── js/
+│       ├── csrf.js                 # Fetch monkey-patch — auto-injects CSRF token
+│       ├── chat.js                 # Chat UI, Three.js background, voice, language picker
+│       ├── register.js             # Two-step OTP registration flow
+│       ├── forgot.js               # Password reset flow
+│       └── profile.js              # Profile dashboard and conversation history
 │
 ├── templates/
-│   ├── login.html          # Login + Register (tabbed, single page)
-│   ├── chat.html           # Main chat UI with sidebar and voice
-│   ├── forgot.html         # Forgot password + OTP reset
-│   ├── profile.html        # User profile + conversation history
-│   ├── help.html           # Help / FAQ page
-│   ├── privacy.html        # Privacy policy
-│   └── email.html          # OTP email template
+│   ├── base.html                   # Single base template — fonts, CSRF, AdSense, headers
+│   ├── chat.html                   # Main chat interface
+│   ├── login.html                  # Login page
+│   ├── register.html               # Registration + OTP verification
+│   ├── forgot.html                 # Password reset
+│   ├── profile.html                # User dashboard & conversation history
+│   ├── help.html                   # Help / FAQ page
+│   ├── privacy.html                # Privacy policy
+│   └── email.html                  # OTP email template (standalone, not extended)
 │
-└── static/
-    └── style.css           # All styles — dark theme, animations, responsive
+├── tests/
+│   ├── conftest.py                 # Fixtures: app, client, registered user, mongomock
+│   ├── test_auth.py                # Login, register, forgot password, logout tests
+│   ├── test_chat.py                # Chat API and rate limiting tests
+│   ├── test_profile.py             # Profile and conversations API tests
+│   └── test_security.py            # CSRF, security headers, input sanitisation tests
+│
+├── Dockerfile                      # Two-stage production image (non-root user)
+├── docker-compose.yml              # Local dev stack: app + MongoDB
+├── Procfile                        # Gunicorn startup for Render
+├── requirements.txt                # Production dependencies
+├── requirements-dev.txt            # Dev dependencies: pytest, black, ruff, mypy
+├── .env.example                    # Template for all environment variables
+└── .gitignore
 ```
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
 
-# \[!\[Flask](https://img.shields.io/badge/Flask-3.1.0-black?style=flat-square\&logo=flask)](https://flask.palletsprojects.com)
+---
 
-# \[!\[MongoDB](https://img.shields.io/badge/MongoDB-Atlas-green?style=flat-square\&logo=mongodb)](https://mongodb.com)
+## Prerequisites
 
-<<<<<<< HEAD
-# \[!\[Render](https://img.shields.io/badge/Deployed-Render-purple?style=flat-square\&logo=render)](https://render.com)
+- Python 3.10 or higher
+- A running MongoDB instance (local or [MongoDB Atlas](https://www.mongodb.com/atlas))
+- An [OpenRouter](https://openrouter.ai/) account and API key
+- A Google account for the OTP email webhook (see [Email OTP Setup](#email-otp-setup-google-apps-script))
 
-# \[!\[License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-=======
-Create a `.env` file in the root directory (never commit this to GitHub):
+---
+
+## Environment Variables
+
+Copy `.env.example` to `.env` and fill in your values. **Never commit `.env`** — it is already in `.gitignore`.
 
 ```env
-# ── Required ──────────────────────────────────────────
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/OSubhajit
-OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxx
-SECRET_KEY=your_random_64_char_hex_string
-GMAIL_SCRIPT_URL=https://script.google.com/macros/s/XXXX/exec
+# ── Required ──────────────────────────────────────────────────────────────────
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/<dbname>?retryWrites=true&w=majority
+OPENROUTER_API_KEY=sk-or-...
+SECRET_KEY=a_long_random_secret_string
 
-# ── Optional (with defaults) ───────────────────────────
-AI_MODEL=openai/gpt-3.5-turbo        # or meta-llama/llama-3.3-70b-instruct:free
+# ── Optional — defaults shown ─────────────────────────────────────────────────
+AI_MODEL=openai/gpt-3.5-turbo
+GMAIL_SCRIPT_URL=
+ADSENSE_PUB_ID=
+PORT=5000
 ```
 
-> **Generate a secure SECRET_KEY:**
-> ```bash
-> python -c "import secrets; print(secrets.token_hex(32))"
-> ```
+### Variable reference
 
-### On Render — add the same keys under **Environment → Add Environment Variable**
+| Variable | Required | Description |
+|---|---|---|
+| `MONGO_URI` | ✅ | MongoDB connection string. App exits on startup if missing. |
+| `OPENROUTER_API_KEY` | ✅ | API key for OpenRouter. Chat endpoint returns 500 if missing. |
+| `SECRET_KEY` | ✅ in prod | Flask session signing key. App exits in production if missing; uses a dev default locally. |
+| `AI_MODEL` | ❌ | LLM model slug passed to OpenRouter. Defaults to `openai/gpt-3.5-turbo`. |
+| `GMAIL_SCRIPT_URL` | ❌ | Google Apps Script webhook URL for OTP emails. OTP flows fail silently if not set. |
+| `ADSENSE_PUB_ID` | ❌ | Google AdSense publisher ID (e.g. `ca-pub-XXXXXXXXXXXXXXXX`). Leave blank to disable all ad tags. |
+| `RENDER` | ❌ | Set to `"true"` automatically by Render. Enables secure cookies and disables debug mode. |
+| `PORT` | ❌ | Local development port. Defaults to `5000`. |
 
-| Key | Notes |
-|-----|-------|
-| `MONGO_URI` | MongoDB Atlas connection string |
-| `OPENROUTER_API_KEY` | Get from [openrouter.ai/keys](https://openrouter.ai/keys) |
-| `SECRET_KEY` | Generate with command above — **required** in production |
-| `GMAIL_SCRIPT_URL` | Your deployed Google Apps Script webhook URL |
-| `AI_MODEL` | Optional — defaults to `openai/gpt-3.5-turbo` |
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
+---
 
-# 
+## Local Development
 
-<<<<<<< HEAD
-# <br/>
+**1. Clone the repository**
 
-# 
-
-# > \*"कर्मण्येवाधिकारस्ते मा फलेषु कदाचन"\*
-
-# > "You have the right to act, but never to the fruits of action." — Gita 2.47
-
-# 
-
-# </div>
-
-# 
-
-# \---
-
-# 
-=======
-## 🛠️ Local Setup
-
-### 1. Clone the repository
 ```bash
 git clone https://github.com/OSubhajit/Arjun-ai.git
 cd Arjun-ai
 ```
 
-### 2. Create and activate a virtual environment
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
+**2. Create and activate a virtual environment**
 
-# macOS / Linux
-python3 -m venv venv
-source venv/bin/activate
+```bash
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+**3. Install dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Create your `.env` file
+**4. Configure environment variables**
+
 ```bash
-cp .env.example .env   # if example exists, or create manually
-# Fill in MONGO_URI, OPENROUTER_API_KEY, SECRET_KEY, GMAIL_SCRIPT_URL
+cp .env.example .env
+# Fill in MONGO_URI, OPENROUTER_API_KEY, and SECRET_KEY
 ```
 
-### 5. Run the app
+**5. Run the development server**
+
 ```bash
 python app.py
 ```
 
-Open your browser at:
-```
-http://127.0.0.1:5000
-```
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
-
-# \## 📖 What is GitaPath?
-
-<<<<<<< HEAD
-# 
-
-# \*\*GitaPath\*\* is a full-stack AI web application where users can have a personal conversation with \*\*Arjun\*\* — the legendary warrior from the Mahabharata and the disciple of Lord Krishna. Arjun speaks using the timeless wisdom of all \*\*18 chapters of the Bhagavad Gita\*\*, applying it to real modern-day problems like stress, heartbreak, purpose, fear, and anger.
-
-# 
-=======
-## 🌍 Deployment on Render
-
-1. Push your code to GitHub
-2. Go to [render.com](https://render.com) → **New → Web Service**
-3. Connect your GitHub repo `OSubhajit/Arjun-ai`
-4. Configure:
-
-   | Setting | Value |
-   |---------|-------|
-   | **Environment** | Python |
-   | **Build Command** | `pip install -r requirements.txt` |
-   | **Start Command** | `gunicorn app:app` |
-   | **Instance Type** | Free |
-
-5. Add all **Environment Variables** (see table above)
-6. Click **Deploy** 🚀
-
-> Render auto-deploys every time you push to `main`.
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
-
-# This is not just another chatbot. Arjun has a personality, a history, and a soul. He stood on the battlefield of Kurukshetra ready to give up — and was transformed by Krishna's words. He now passes that same transformation to every user who comes with their battle.
-
-<<<<<<< HEAD
-# 
-
-# \---
-
-# 
-=======
-## 🔐 Security Architecture
-
-| Layer | Implementation |
-|-------|---------------|
-| **Passwords** | bcrypt hashed with salt — never stored as plaintext |
-| **OTP Storage** | Hashed before saving to MongoDB; TTL index auto-expires in 10 min |
-| **OTP Generation** | `secrets.randbelow()` — cryptographically secure random |
-| **OTP Comparison** | `hmac.compare_digest()` — constant-time, prevents timing attacks |
-| **Rate Limiting** | MongoDB-backed — works across all Gunicorn workers (not in-memory) |
-| **Session Security** | `SESSION_COOKIE_HTTPONLY=True`, `SAMESITE=Lax`, `SECURE=True` on HTTPS |
-| **XSS Prevention** | All user/AI text escaped via `escapeHtml()` before DOM insertion |
-| **Secret Key** | App refuses to start in production if `SECRET_KEY` env var is missing |
-| **Email Enumeration** | Forgot password always returns same response — doesn't reveal registered emails |
-| **Message Limits** | API chat endpoint rejects messages over 2000 characters |
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
-
-# \## ✨ Features
-
-<<<<<<< HEAD
-# 
-
-# | Feature | Description |
-=======
-## 🧠 How the AI Works
-
-Arjun is powered by an **OpenRouter LLM** with a deep system prompt that defines his complete character, knowledge base, and communication style.
+The app will be available at `http://localhost:5000`. On startup you will see structured logs confirming all services are connected:
 
 ```
-User message
-     │
-     ▼
-Flask /api/chat endpoint
-     │
-     ├── Auth check (session)
-     ├── Message length limit (2000 chars)
-     ├── Load last 5 chat turns from MongoDB (projection)
-     │
-     ▼
-OpenRouter API (GPT-3.5-turbo / Llama 3.3 70B)
-  System prompt: Arjun's full character + Gita knowledge
-  Last 5 turns: conversation context
-  User message: current question
-     │
-     ▼
-Reply saved to MongoDB (capped at 50 entries with $slice)
-     │
-     ▼
-JSON response → rendered in chat UI
-     │
-     └── Devanagari runs wrapped in shloka box
-     └── Web Speech API reads the reply aloud (if voice enabled)
+2026-05-06 08:00:00 [INFO] config: === STARTUP ===
+2026-05-06 08:00:00 [INFO] config: MONGO_URI        : set
+2026-05-06 08:00:00 [INFO] config: API_KEY          : set
+2026-05-06 08:00:00 [INFO] config: AI_MODEL         : openai/gpt-3.5-turbo
+2026-05-06 08:00:00 [INFO] config: ADSENSE_PUB_ID   : (not set — ads disabled)
+2026-05-06 08:00:00 [INFO] config: IS_PROD          : False
+2026-05-06 08:00:00 [INFO] extensions: MongoDB connected
+2026-05-06 08:00:00 [INFO] extensions: unique email index ready
+2026-05-06 08:00:00 [INFO] extensions: OTP TTL index ready
+2026-05-06 08:00:00 [INFO] extensions: rate-limit TTL index ready
 ```
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
 
-# |---|---|
+---
 
-<<<<<<< HEAD
-# | 🏹 \*\*Arjun AI Chat\*\* | Conversational AI that stays fully in character as Arjun — never breaks role |
+## Docker
 
-# | 📜 \*\*Bhagavad Gita Wisdom\*\* | Quotes relevant Sanskrit shlokas with meaning in natural conversation |
-=======
-## 📸 Screenshots
+Run the full stack (app + MongoDB) with a single command — no local MongoDB installation needed.
 
-| Chat Interface | Profile Page |
+```bash
+# Copy and fill in your env vars
+cp .env.example .env
+
+# Start everything
+docker compose up --build
+```
+
+The app will be available at `http://localhost:5000`. MongoDB data is persisted in a Docker volume (`mongo_data`) so it survives container restarts.
+
+To stop:
+
+```bash
+docker compose down
+```
+
+---
+
+## Deploying to Render
+
+The repository ships with a `Procfile` that tells Render how to start the app:
+
+```
+web: gunicorn app:app --workers 2 --timeout 60
+```
+
+**Step-by-step**
+
+1. Push your code to GitHub.
+2. Go to [Render](https://render.com/) → **New Web Service** → connect your repo.
+3. Set **Build Command** to `pip install -r requirements.txt`.
+4. Set **Start Command** to `gunicorn app:app --workers 2 --timeout 60` (Render also reads the `Procfile` automatically).
+5. Add all required **Environment Variables** in the Render dashboard.
+6. Deploy. Render will connect to MongoDB, verify the API key, and bring the app online.
+
+> **Tip:** Use [MongoDB Atlas](https://www.mongodb.com/atlas) for a free cloud-hosted database that works seamlessly with Render.
+
+---
+
+## Email OTP Setup (Google Apps Script)
+
+Arjun AI sends OTP emails through a **Google Apps Script webhook** — no paid SMTP service required.
+
+**1. Open Google Apps Script**
+
+Go to [script.google.com](https://script.google.com) and create a new project.
+
+**2. Paste the following script**
+
+```javascript
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const { to, name, otp } = data;
+
+    GmailApp.sendEmail(to, "Your Arjun AI OTP Code", "", {
+      htmlBody: `<p>Hello ${name},</p>
+                 <p>Your OTP is: <strong>${otp}</strong></p>
+                 <p>It expires in 10 minutes.</p>`
+    });
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+```
+
+**3. Deploy as a Web App**
+
+- Click **Deploy → New Deployment**.
+- Set **Execute as**: *Me* and **Who has access**: *Anyone*.
+- Click **Deploy** and copy the web app URL.
+
+**4. Add the URL to your `.env`**
+
+```env
+GMAIL_SCRIPT_URL=https://script.google.com/macros/s/.../exec
+```
+
+> Emails will be sent from the Google account that owns the Apps Script project.
+
+---
+
+## Running Tests
+
+The test suite uses `pytest` and `mongomock` — no live database or API key required.
+
+```bash
+# Install dev dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=. --cov-report=term-missing
+
+# Run a specific test file
+pytest tests/test_auth.py -v
+```
+
+The suite covers 30 test cases across four files:
+
+| File | What it tests |
 |---|---|
-| ![chat](https://arjun-ai.onrender.com) | ![profile](https://arjun-ai.onrender.com/profile) |
-
-> *(Visit the live demo to see the full UI)*
-
----
-
-## 🔮 Roadmap
-
-- [ ] 📊 Admin dashboard with user analytics
-- [ ] 🧠 Longer memory using vector search (MongoDB Atlas Vector)
-- [ ] 📖 Full Bhagavad Gita shloka database (all 700 verses)
-- [ ] 🌐 Hindi / Bengali language support
-- [ ] 📱 React Native mobile app
-- [ ] 🎙️ Full voice conversation mode (STT + TTS)
-- [ ] 🔔 Daily wisdom notification system
+| `tests/test_auth.py` | Login, register OTP flow, forgot password, logout |
+| `tests/test_chat.py` | Chat API, history, AI timeout handling |
+| `tests/test_profile.py` | Profile page, conversations API, delete |
+| `tests/test_security.py` | CSRF protection, security headers, XSS sanitisation |
 
 ---
 
-## 📦 Dependencies
+## API Reference
 
-```txt
-Flask==3.1.0
-pymongo==4.16.0
-requests==2.32.3
-python-dotenv==1.1.0
-bcrypt==4.0.1
-dnspython
-gunicorn
-```
+All endpoints that mutate state require a valid **CSRF token** in the `X-CSRF-Token` request header. Fetch it first from `GET /api/csrf-token`.
+
+### Authentication
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/login` | Render login page |
+| `POST` | `/login` | Authenticate user. Body: `{ email, password, rememberMe }` |
+| `GET` | `/register` | Render registration page |
+| `POST` | `/register` | Two-step flow. Body: `{ action: "send_otp", email, name, password }` then `{ action: "verify_otp", email, otp }` |
+| `GET` | `/forgot` | Render password reset page |
+| `POST` | `/forgot` | Two-step flow. Body: `{ action: "send_otp", email }` then `{ action: "reset_password", email, otp, password }` |
+| `POST` | `/logout` | Clear session. Requires CSRF token. |
+
+### Chat
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/chat` | Render the chat interface (authenticated) |
+| `POST` | `/api/chat` | Send a message to Arjun. Body: `{ message, language, session_id }`. Returns `{ reply }`. |
+| `GET` | `/api/history` | Fetch the last 10 chat entries for the current session. |
+
+### Profile & Conversations
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/profile` | Render the profile/dashboard page (authenticated) |
+| `GET` | `/api/profile` | Returns `{ name, email, total_messages, total_sessions, conversations }` |
+| `GET` | `/api/conversations` | Returns all conversations grouped by session |
+| `DELETE` | `/api/conversations/<id>` | Delete a conversation by session ID or date string |
+
+### Utility
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/csrf-token` | Returns `{ csrf_token }` for use in subsequent mutating requests |
+| `GET` | `/help` | Render the help page |
+| `GET` | `/privacy` | Render the privacy policy page |
 
 ---
 
-## 🤝 Contributing
+## Security Overview
 
-Contributions are welcome!
+**CSRF protection** — Every state-changing endpoint validates a `X-CSRF-Token` header against the server-side session token using `hmac.compare_digest`, preventing timing-based attacks.
 
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "Add: your feature"`
-4. Push to the branch: `git push origin feature/your-feature`
-5. Open a Pull Request
+**Secure session cookies** — In production (`RENDER=true`), cookies are flagged `Secure`, `HttpOnly`, and `SameSite=Lax`. Sessions last 7 days when "Remember me" is checked.
+
+**Password hashing** — All passwords are stored as bcrypt hashes. Plaintext passwords are never persisted anywhere.
+
+**OTP security** — OTPs are 6-digit codes generated with `secrets.randbelow` (cryptographically secure). They expire after 10 minutes via a MongoDB TTL index. Five failed attempts invalidate the OTP immediately.
+
+**Input sanitisation** — User-supplied names are HTML-escaped with `markupsafe.escape` and truncated to 100 characters. Emails are validated with a strict regex. Message length is capped at 2,000 characters.
+
+**HTTP security headers** — Applied globally via an `after_request` hook:
+
+| Header | Value |
+|---|---|
+| `X-Frame-Options` | `DENY` |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` |
+| `Content-Security-Policy` | Restricts scripts, styles, fonts, images, and frames to known safe origins |
+
+**Proxy-aware IP detection** — The `X-Forwarded-For` header is honoured so that rate limits apply to real client IPs, not the proxy IP.
 
 ---
 
-## 📄 License
+## Rate Limits
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
+| Action | Limit | Window |
+|---|---|---|
+| OTP send (register / forgot password) | 3 requests | per IP, per 10 minutes |
+| Login attempts | 10 attempts | per IP, per 15 minutes |
+| Chat messages | 20 messages | per user account, per 60 seconds |
 
-# | 🔐 \*\*Secure Auth System\*\* | Register, Login, Logout with bcrypt-hashed passwords and session management |
+Rate limit counters are stored in the `rate_limits` MongoDB collection with a TTL index for automatic expiry — no cron jobs needed.
 
-# | 📧 \*\*OTP Email Verification\*\* | Email-based OTP for registration and password reset via Google Apps Script |
+---
 
-<<<<<<< HEAD
-# | 🗂 \*\*Conversation History\*\* | All chats saved to MongoDB, grouped by date, viewable in sidebar |
-=======
-<div align="center">
+## Multi-language Support
 
-**Subhajit Sarkar**
+Pass an IETF language tag in the `language` field of the `/api/chat` request body. Arjun will respond entirely in the requested language, while keeping Sanskrit shlokas in their original script.
 
-*CSE Student · Aspiring Penetration Tester · Builder*
+**Indian languages** — `hi` Hindi, `bn` Bengali, `ta` Tamil, `te` Telugu, `mr` Marathi, `gu` Gujarati, `kn` Kannada, `ml` Malayalam, `pa` Punjabi, `or` Odia, `as` Assamese, `ur` Urdu
 
-[![GitHub](https://img.shields.io/badge/GitHub-OSubhajit-black?style=flat-square&logo=github)](https://github.com/OSubhajit)
+**European languages** — `es` Spanish, `fr` French, `de` German, `it` Italian, `pt` Portuguese, `ru` Russian, `nl` Dutch, `pl` Polish, `sv` Swedish, `no` Norwegian, `da` Danish, `fi` Finnish, `el` Greek, `ro` Romanian, `cs` Czech, `hu` Hungarian, `uk` Ukrainian, `tr` Turkish
 
-</div>
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
+**Asian / Pacific languages** — `ja` Japanese, `ko` Korean, `zh` Chinese, `id` Indonesian, `ms` Malay, `th` Thai, `vi` Vietnamese, `ar` Arabic, `fa` Persian, `he` Hebrew, `ne` Nepali, `si` Sinhala
 
-# | 👤 \*\*User Profile Page\*\* | Shows total messages, sessions, and full conversation history |
+**African languages** — `sw` Swahili, `af` Afrikaans
 
-<<<<<<< HEAD
-# | 🔊 \*\*Voice Input \& Output\*\* | Speak your question (Web Speech API) and hear Arjun's response |
+Unknown or malformed language codes fall back silently to English (`en`).
 
-# | 📱 \*\*Mobile Responsive\*\* | Fully responsive layout with collapsible sidebar for mobile |
+---
 
-# | 🌐 \*\*Production Deployed\*\* | Live on Render with Gunicorn, connected to MongoDB Atlas |
+## License
 
-# | 🛡️ \*\*Security Hardened\*\* | Rate limiting, XSS protection, constant-time OTP comparison, no plaintext passwords |
+This project is licensed under the terms found in the [LICENSE](LICENSE) file.
 
-# 
+---
 
-# \---
-
-# 
-
-# \## 🎯 Live Demo
-
-# 
-
-# 👉 \*\*\[https://arjun-ai.onrender.com](https://arjun-ai.onrender.com)\*\*
-
-# 
-
-# > ⚠️ Hosted on Render free tier — may take \*\*30–60 seconds\*\* to wake up on first visit.
-
-# 
-
-# \*\*Try asking Arjun:\*\*
-
-# \- \*"I feel like giving up on everything"\*
-
-# \- \*"What does the Gita say about fear?"\*
-
-# \- \*"I am heartbroken and lost"\*
-
-# \- \*"Explain karma to me in simple words"\*
-
-# 
-
-# \---
-
-# 
-
-# \## 🏗️ Tech Stack
-
-# 
-
-# ```
-
-# ┌─────────────────────────────────────────────────────────┐
-
-# │                        Frontend                         │
-
-# │         HTML5 · CSS3 · Vanilla JS · Web Speech API      │
-
-# ├─────────────────────────────────────────────────────────┤
-
-# │                        Backend                          │
-
-# │              Flask 3.1 · Python 3.10+ · Gunicorn        │
-
-# ├─────────────────────────────────────────────────────────┤
-
-# │                       Database                          │
-
-# │           MongoDB Atlas (pymongo) · TTL Indexes         │
-
-# ├─────────────────────────────────────────────────────────┤
-
-# │                      AI / Email                         │
-
-# │       OpenRouter API · Google Apps Script (Gmail)       │
-
-# ├─────────────────────────────────────────────────────────┤
-
-# │                      Deployment                         │
-
-# │                   Render (free tier)                    │
-
-# └─────────────────────────────────────────────────────────┘
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## 📂 Project Structure
-
-# 
-
-# ```
-
-# Arjun-ai/
-
-# │
-
-# ├── app.py                  # Main Flask application — all routes, auth, AI logic
-
-# ├── requirements.txt        # Python dependencies
-
-# ├── Procfile                # Gunicorn start command for Render
-
-# ├── .gitignore              # Excludes .env, \_\_pycache\_\_, venv
-
-# │
-
-# ├── templates/
-
-# │   ├── login.html          # Login + Register (tabbed, single page)
-
-# │   ├── chat.html           # Main chat UI with sidebar and voice
-
-# │   ├── forgot.html         # Forgot password + OTP reset
-
-# │   ├── profile.html        # User profile + conversation history
-
-# │   ├── help.html           # Help / FAQ page
-
-# │   ├── privacy.html        # Privacy policy
-
-# │   └── email.html          # OTP email template
-
-# │
-
-# └── static/
-
-# &#x20;   └── style.css           # All styles — dark theme, animations, responsive
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## ⚙️ Environment Variables
-
-# 
-
-# Create a `.env` file in the root directory (never commit this to GitHub):
-
-# 
-
-# ```env
-
-# \# ── Required ──────────────────────────────────────────
-
-# MONGO\_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/OSubhajit
-
-# OPENROUTER\_API\_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxx
-
-# SECRET\_KEY=your\_random\_64\_char\_hex\_string
-
-# GMAIL\_SCRIPT\_URL=https://script.google.com/macros/s/XXXX/exec
-
-# 
-
-# \# ── Optional (with defaults) ───────────────────────────
-
-# AI\_MODEL=openai/gpt-3.5-turbo        # or meta-llama/llama-3.3-70b-instruct:free
-
-# ```
-
-# 
-
-# > \*\*Generate a secure SECRET\_KEY:\*\*
-
-# > ```bash
-
-# > python -c "import secrets; print(secrets.token\_hex(32))"
-
-# > ```
-
-# 
-
-# \### On Render — add the same keys under \*\*Environment → Add Environment Variable\*\*
-
-# 
-
-# | Key | Notes |
-
-# |-----|-------|
-
-# | `MONGO\_URI` | MongoDB Atlas connection string |
-
-# | `OPENROUTER\_API\_KEY` | Get from \[openrouter.ai/keys](https://openrouter.ai/keys) |
-
-# | `SECRET\_KEY` | Generate with command above — \*\*required\*\* in production |
-
-# | `GMAIL\_SCRIPT\_URL` | Your deployed Google Apps Script webhook URL |
-
-# | `AI\_MODEL` | Optional — defaults to `openai/gpt-3.5-turbo` |
-
-# 
-
-# \---
-
-# 
-
-# \## 🛠️ Local Setup
-
-# 
-
-# \### 1. Clone the repository
-
-# ```bash
-
-# git clone https://github.com/OSubhajit/Arjun-ai.git
-
-# cd Arjun-ai
-
-# ```
-
-# 
-
-# \### 2. Create and activate a virtual environment
-
-# ```bash
-
-# \# Windows
-
-# python -m venv venv
-
-# venv\\Scripts\\activate
-
-# 
-
-# \# macOS / Linux
-
-# python3 -m venv venv
-
-# source venv/bin/activate
-
-# ```
-
-# 
-
-# \### 3. Install dependencies
-
-# ```bash
-
-# pip install -r requirements.txt
-
-# ```
-
-# 
-
-# \### 4. Create your `.env` file
-
-# ```bash
-
-# cp .env.example .env   # if example exists, or create manually
-
-# \# Fill in MONGO\_URI, OPENROUTER\_API\_KEY, SECRET\_KEY, GMAIL\_SCRIPT\_URL
-
-# ```
-
-# 
-
-# \### 5. Run the app
-
-# ```bash
-
-# python app.py
-
-# ```
-
-# 
-
-# Open your browser at:
-
-# ```
-
-# http://127.0.0.1:5000
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## 🌍 Deployment on Render
-
-# 
-
-# 1\. Push your code to GitHub
-
-# 2\. Go to \[render.com](https://render.com) → \*\*New → Web Service\*\*
-
-# 3\. Connect your GitHub repo `OSubhajit/Arjun-ai`
-
-# 4\. Configure:
-
-# 
-
-# &#x20;  | Setting | Value |
-
-# &#x20;  |---------|-------|
-
-# &#x20;  | \*\*Environment\*\* | Python |
-
-# &#x20;  | \*\*Build Command\*\* | `pip install -r requirements.txt` |
-
-# &#x20;  | \*\*Start Command\*\* | `gunicorn app:app` |
-
-# &#x20;  | \*\*Instance Type\*\* | Free |
-
-# 
-
-# 5\. Add all \*\*Environment Variables\*\* (see table above)
-
-# 6\. Click \*\*Deploy\*\* 🚀
-
-# 
-
-# > Render auto-deploys every time you push to `main`.
-
-# 
-
-# \---
-
-# 
-
-# \## 🔐 Security Architecture
-
-# 
-
-# | Layer | Implementation |
-
-# |-------|---------------|
-
-# | \*\*Passwords\*\* | bcrypt hashed with salt — never stored as plaintext |
-
-# | \*\*OTP Storage\*\* | Hashed before saving to MongoDB; TTL index auto-expires in 10 min |
-
-# | \*\*OTP Generation\*\* | `secrets.randbelow()` — cryptographically secure random |
-
-# | \*\*OTP Comparison\*\* | `hmac.compare\_digest()` — constant-time, prevents timing attacks |
-
-# | \*\*Rate Limiting\*\* | MongoDB-backed — works across all Gunicorn workers (not in-memory) |
-
-# | \*\*Session Security\*\* | `SESSION\_COOKIE\_HTTPONLY=True`, `SAMESITE=Lax`, `SECURE=True` on HTTPS |
-
-# | \*\*XSS Prevention\*\* | All user/AI text escaped via `escapeHtml()` before DOM insertion |
-
-# | \*\*Secret Key\*\* | App refuses to start in production if `SECRET\_KEY` env var is missing |
-
-# | \*\*Email Enumeration\*\* | Forgot password always returns same response — doesn't reveal registered emails |
-
-# | \*\*Message Limits\*\* | API chat endpoint rejects messages over 2000 characters |
-
-# 
-
-# \---
-
-# 
-
-# \## 🧠 How the AI Works
-
-# 
-
-# Arjun is powered by an \*\*OpenRouter LLM\*\* with a deep system prompt that defines his complete character, knowledge base, and communication style.
-
-# 
-
-# ```
-
-# User message
-
-# &#x20;    │
-
-# &#x20;    ▼
-
-# Flask /api/chat endpoint
-
-# &#x20;    │
-
-# &#x20;    ├── Auth check (session)
-
-# &#x20;    ├── Message length limit (2000 chars)
-
-# &#x20;    ├── Load last 5 chat turns from MongoDB (projection)
-
-# &#x20;    │
-
-# &#x20;    ▼
-
-# OpenRouter API (GPT-3.5-turbo / Llama 3.3 70B)
-
-# &#x20; System prompt: Arjun's full character + Gita knowledge
-
-# &#x20; Last 5 turns: conversation context
-
-# &#x20; User message: current question
-
-# &#x20;    │
-
-# &#x20;    ▼
-
-# Reply saved to MongoDB (capped at 50 entries with $slice)
-
-# &#x20;    │
-
-# &#x20;    ▼
-
-# JSON response → rendered in chat UI
-
-# &#x20;    │
-
-# &#x20;    └── Devanagari runs wrapped in shloka box
-
-# &#x20;    └── Web Speech API reads the reply aloud (if voice enabled)
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## 📸 Screenshots
-
-# 
-
-# | Chat Interface | Profile Page |
-
-# |---|---|
-
-# | !\[chat](https://arjun-ai.onrender.com) | !\[profile](https://arjun-ai.onrender.com/profile) |
-
-# 
-
-# > \*(Visit the live demo to see the full UI)\*
-
-# 
-
-# \---
-
-# 
-
-# \## 🔮 Roadmap
-
-# 
-
-# \- \[ ] 📊 Admin dashboard with user analytics
-
-# \- \[ ] 🧠 Longer memory using vector search (MongoDB Atlas Vector)
-
-# \- \[ ] 📖 Full Bhagavad Gita shloka database (all 700 verses)
-
-# \- \[ ] 🌐 Hindi / Bengali language support
-
-# \- \[ ] 📱 React Native mobile app
-
-# \- \[ ] 🎙️ Full voice conversation mode (STT + TTS)
-
-# \- \[ ] 🔔 Daily wisdom notification system
-
-# 
-
-# \---
-
-# 
-
-# \## 📦 Dependencies
-
-# 
-
-# ```txt
-
-# Flask==3.1.0
-
-# pymongo==4.16.0
-
-# requests==2.32.3
-
-# python-dotenv==1.1.0
-
-# bcrypt==4.0.1
-
-# dnspython
-
-# gunicorn
-
-# ```
-
-# 
-
-# \---
-
-# 
-
-# \## 🤝 Contributing
-
-# 
-
-# Contributions are welcome!
-
-# 
-
-# 1\. Fork the repo
-
-# 2\. Create a feature branch: `git checkout -b feature/your-feature`
-
-# 3\. Commit your changes: `git commit -m "Add: your feature"`
-
-# 4\. Push to the branch: `git push origin feature/your-feature`
-
-# 5\. Open a Pull Request
-
-# 
-
-# \---
-
-# 
-
-# \## 📄 License
-
-# 
-
-# This project is licensed under the \*\*MIT License\*\* — see the \[LICENSE](LICENSE) file for details.
-
-# 
-
-# \---
-
-# 
-
-# \## 👤 Author
-
-# 
-
-# <div align="center">
-
-# 
-
-# \*\*Subhajit Sarkar\*\*
-
-# 
-
-# \*CSE Student · Aspiring Penetration Tester · Builder\*
-
-# 
-
-# \[!\[GitHub](https://img.shields.io/badge/GitHub-OSubhajit-black?style=flat-square\&logo=github)](https://github.com/OSubhajit)
-
-# 
-
-# </div>
-
-# 
-
-# \---
-
-# 
-
-# <div align="center">
-
-# 
-
-# If this project helped you or inspired you, please consider giving it a ⭐ on GitHub!
-
-# 
-
-# \*"The soul is never born nor dies at any time. It has not come into being, does not come into being, and will not come into being. It is unborn, eternal, ever-existing, and primeval."\*
-
-# \*— Bhagavad Gita 2.20\*
-
-# 
-
-# </div>
-
-=======
-<div align="center">
-
-If this project helped you or inspired you, please consider giving it a ⭐ on GitHub!
-
-*"The soul is never born nor dies at any time. It has not come into being, does not come into being, and will not come into being. It is unborn, eternal, ever-existing, and primeval."*
-*— Bhagavad Gita 2.20*
-
-</div>
->>>>>>> 174acf9fbcabecb5b38311530f86a4e1a435fd70
+*Built with devotion. Guided by the Gita.*
