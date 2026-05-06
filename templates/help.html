@@ -1,19 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="google-adsense-account" content="ca-pub-7813661458323342">
-  <title>Help & Contact — GitaPath</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/static/style.css"/>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7813661458323342" crossorigin="anonymous"></script>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Help & Contact — GitaPath{% endblock %}
+
+{% block content %}
 <div class="simple-page">
   <div class="simple-card">
     <div class="simple-logo">🪷</div>
-    <h1>Help & Contact</h1>
+    <h1>Help &amp; Contact</h1>
     <p class="subtitle">We're here to help you on your path</p>
 
     <div class="section-label" style="padding-top:0;">📬 Get in Touch</div>
@@ -76,5 +68,4 @@
     </div>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

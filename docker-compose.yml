@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: arjun_mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: gitapath
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Flask app ──────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      target: production
+    container_name: arjun_app
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    ports:
+      - "5000:8000"
+    env_file:
+      - .env
+    environment:
+      # Override MONGO_URI to use the Docker network alias
+      MONGO_URI: mongodb://mongo:27017/gitapath
+    volumes:
+      # Mount source code for hot-reload in dev (remove for pure prod)
+      - .:/app
+    command: >
+      sh -c "gunicorn app:app --workers 2 --timeout 60 --bind 0.0.0.0:8000 --reload"
+
+volumes:
+  mongo_data:
+    driver: local

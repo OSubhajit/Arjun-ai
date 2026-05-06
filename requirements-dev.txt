@@ -1,0 +1,16 @@
+# Install production deps first: pip install -r requirements.txt
+-r requirements.txt
+
+# Testing
+pytest==8.3.5
+pytest-cov==6.1.0
+mongomock==4.3.0
+
+# Code quality
+black==24.10.0
+ruff==0.9.0
+mypy==1.14.0
+
+# Type stubs
+types-requests==2.32.0.20241016
+types-bcrypt==4.0.0.20240101
