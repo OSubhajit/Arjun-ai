@@ -16,7 +16,9 @@ function toggleConv(item) {
 }
 
 async function doLogout() {
-  try { await fetch("/logout", { method: "POST" }); } catch (_) {}
+  const meta  = document.querySelector('meta[name=csrf-token]');
+  const token = meta ? meta.content : '';
+  try { await fetch("/logout", { method: "POST", headers: { "X-CSRF-Token": token } }); } catch (_) {}
   window.location.href = "/";
 }
 

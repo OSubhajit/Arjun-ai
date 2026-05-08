@@ -140,10 +140,15 @@ function toggleLangDropdown() {
   const dropdown = document.getElementById('langDropdown');
   const btn      = document.querySelector('.lang-btn');
   if (dropdown.classList.contains('open')) { dropdown.classList.remove('open'); return; }
-  const rect   = btn.getBoundingClientRect();
-  const dropW  = 210;
-  dropdown.style.top  = (rect.bottom + 6) + 'px';
-  dropdown.style.left = Math.max(4, rect.right - dropW) + 'px';
+  if (window.innerWidth > 768) {
+    const rect  = btn.getBoundingClientRect();
+    const dropW = 216;
+    dropdown.style.top    = (rect.bottom + 6) + 'px';
+    dropdown.style.left   = Math.max(4, rect.right - dropW) + 'px';
+    dropdown.style.right  = 'auto';
+    dropdown.style.bottom = 'auto';
+  }
+  // On mobile the CSS handles fixed positioning at the bottom via media query
   dropdown.classList.add('open');
   const active = dropdown.querySelector('.lang-option.active');
   if (active) setTimeout(() => active.scrollIntoView({ block: 'nearest' }), 50);
