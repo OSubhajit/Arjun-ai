@@ -437,7 +437,7 @@ function addMessage(role, text, isoTimestamp) {
   const div    = document.createElement('div');
   div.className = 'message ' + role;
   div.innerHTML = `
-    <div class="msg-avatar ${role}">${isArjun ? '🏹' : escapeHtml(userName.charAt(0).toUpperCase())}</div>
+    <div class="msg-avatar ${role}">${isArjun ? '<img src="/static/warrior.svg" alt="Arjun" style="width:22px;height:28px;display:block;">' : escapeHtml(userName.charAt(0).toUpperCase())}</div>
     <div class="msg-content">
       <div class="msg-bubble">${safeText}</div>
       <div class="msg-time">${isArjun ? 'Arjun' : 'You'} · ${escapeHtml(time)}</div>
