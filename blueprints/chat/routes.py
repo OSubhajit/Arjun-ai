@@ -177,6 +177,113 @@ def api_chat():
     return jsonify({"reply": reply})
 
 
+
+
+# ── /api/chat-vision (image upload + live camera) ────────────────────────────
+
+@chat_bp.route("/api/chat-vision", methods=["POST"])
+def api_chat_vision():
+    if "user" not in session:
+        return jsonify({"reply": "Session expired. Please log in again."}), 401
+    if not validate_csrf():
+        return jsonify({"reply": "Invalid CSRF token."}), 403
+    if not request.is_json:
+        return jsonify({"reply": "JSON required"}), 415
+
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"reply": "Invalid request"}), 400
+    if is_chat_rate_limited(session["user"]):
+        return jsonify({"reply": "Too many messages. Please slow down."}), 429
+
+    user_message = data.get("message", "").strip() or "What do you see in this image? Respond as Arjun."
+    image_b64    = data.get("image", "").strip()
+    image_type   = data.get("image_type", "image/jpeg")
+    session_id   = data.get("session_id", "").strip()
+    language     = data.get("language", "en").strip().lower()
+
+    if not image_b64:
+        return jsonify({"reply": "No image provided."}), 400
+    if len(image_b64) > 3_500_000:  # ~2.5 MB original
+        return jsonify({"reply": "Image too large. Please use a smaller image."}), 400
+    if not re.match(r'^[a-z]{2,3}$', language) or language not in config.ALLOWED_LANGS:
+        language = "en"
+    if not session_id or not _SESSION_ID_RE.match(session_id):
+        session_id = str(int(datetime.now(timezone.utc).timestamp() * 1000))
+
+    if not config.API_KEY:
+        return jsonify({"reply": "API key missing — please contact support."}), 500
+
+    user      = session["user"]
+    user_data = users_col.find_one(
+        {"email": user},
+        {"chat_history": {"$slice": -3}, "name": 1, "_id": 0},
+    )
+
+    vision_system = _ARJUN_SYSTEM_PROMPT + (
+        "\n\nThe person has shared an image or their live camera view with you. "
+        "You can now see what they are showing. Respond in character as Arjun — "
+        "observe deeply, apply Gita wisdom to what you see, and guide them."
+    )
+
+    messages = [{"role": "system", "content": vision_system}]
+
+    lang_instruction = config.get_lang_instruction(language)
+    if lang_instruction:
+        messages.append({"role": "system", "content": lang_instruction})
+
+    for entry in (user_data or {}).get("chat_history", []):
+        messages.append({"role": "user",      "content": entry["user"]})
+        messages.append({"role": "assistant", "content": entry["arjun"]})
+
+    messages.append({
+        "role": "user",
+        "content": [
+            {"type": "image_url", "image_url": {"url": f"data:{image_type};base64,{image_b64}"}},
+            {"type": "text",      "text": user_message},
+        ],
+    })
+
+    reply      = "Server error. Please try again."
+    ai_success = False
+
+    try:
+        response = http.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {config.API_KEY}",
+                "Content-Type" : "application/json",
+            },
+            json={"model": config.VISION_MODEL, "messages": messages, "temperature": 0.7},
+            timeout=35,
+        )
+        result = response.json()
+        if "choices" in result:
+            reply      = result["choices"][0]["message"]["content"].strip()
+            ai_success = True
+        else:
+            reply = result.get("error", {}).get("message", "AI could not respond at this time.")
+            log.error("Vision API error: %s", reply)
+    except http.exceptions.Timeout:
+        reply = "The vision took too long. Please try again."
+        log.warning("Vision timeout for user %s", user)
+    except Exception as exc:
+        log.error("Vision exception: %s", exc)
+
+    if ai_success:
+        new_entry = {
+            "timestamp" : datetime.now(timezone.utc).isoformat(),
+            "session_id": session_id,
+            "user"      : f"[Image] {user_message}",
+            "arjun"     : reply,
+        }
+        users_col.update_one(
+            {"email": user},
+            {"$push": {"chat_history": {"$each": [new_entry], "$slice": -50}}},
+        )
+
+    return jsonify({"reply": reply})
+
 # ── /api/history ──────────────────────────────────────────────────────────────
 
 @chat_bp.route("/api/history")

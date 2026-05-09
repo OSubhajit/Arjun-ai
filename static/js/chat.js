@@ -555,3 +555,206 @@ function initThreeScene() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 }
+
+// ── IMAGE UPLOAD ─────────────────────────────────────────────────────────────
+
+let selectedImageB64  = null;
+let selectedImageType = 'image/jpeg';
+let cameraStream      = null;
+
+function onImageSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate type
+  if (!file.type.startsWith('image/')) {
+    showToast('Please select an image file.', 'rgba(220,70,70,0.95)', '#fff');
+    return;
+  }
+  // Validate size (max 4MB)
+  if (file.size > 4 * 1024 * 1024) {
+    showToast('Image too large. Max 4 MB.', 'rgba(220,70,70,0.95)', '#fff');
+    return;
+  }
+
+  selectedImageType = file.type;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    selectedImageB64 = dataUrl.split(',')[1]; // strip data:...;base64,
+
+    // Show preview bar
+    const bar   = document.getElementById('imgPreviewBar');
+    const thumb = document.getElementById('imgPreviewThumb');
+    const label = document.getElementById('imgPreviewLabel');
+    thumb.src   = dataUrl;
+    label.textContent = file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name;
+    bar.style.display = 'flex';
+
+    // Highlight upload button
+    document.getElementById('imgUploadBtn').classList.add('active');
+  };
+  reader.readAsDataURL(file);
+  // Reset input so same file can be re-selected
+  event.target.value = '';
+}
+
+function clearImage() {
+  selectedImageB64  = null;
+  selectedImageType = 'image/jpeg';
+  document.getElementById('imgPreviewBar').style.display   = 'none';
+  document.getElementById('imgPreviewThumb').src           = '';
+  document.getElementById('imgUploadBtn').classList.remove('active');
+}
+
+// ── LIVE CAMERA ──────────────────────────────────────────────────────────────
+
+async function openCamera() {
+  const panel = document.getElementById('cameraPanel');
+  const video = document.getElementById('cameraFeed');
+  const status = document.getElementById('cameraStatus');
+  const askBtn = document.getElementById('cameraAskBtn');
+
+  panel.style.display = 'flex';
+  status.textContent  = 'Starting camera…';
+  status.style.display = 'block';
+  askBtn.disabled = true;
+
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    video.srcObject = cameraStream;
+    video.onloadedmetadata = () => {
+      video.play();
+      status.style.display = 'none';
+      askBtn.disabled = false;
+    };
+  } catch (err) {
+    console.error('Camera error:', err);
+    if (err.name === 'NotAllowedError') {
+      status.textContent = '⚠️ Camera permission denied. Please allow camera access.';
+    } else if (err.name === 'NotFoundError') {
+      status.textContent = '⚠️ No camera found on this device.';
+    } else {
+      status.textContent = '⚠️ Could not access camera: ' + err.message;
+    }
+    status.style.display = 'block';
+  }
+}
+
+function closeCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('cameraFeed');
+  video.srcObject = null;
+  document.getElementById('cameraPanel').style.display = 'none';
+  document.getElementById('cameraQuestion').value = '';
+  document.getElementById('cameraStatus').style.display = 'none';
+  document.getElementById('cameraAskBtn').disabled = false;
+}
+
+async function askArjunCamera() {
+  const video   = document.getElementById('cameraFeed');
+  const question = document.getElementById('cameraQuestion').value.trim()
+                   || 'What do you see? Share your wisdom as Arjun.';
+  const askBtn  = document.getElementById('cameraAskBtn');
+
+  if (!cameraStream || video.readyState < 2) {
+    showToast('Camera not ready yet.', 'rgba(220,70,70,0.95)', '#fff');
+    return;
+  }
+
+  // Capture frame to canvas
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Compress to JPEG ~80% quality
+  const dataUrl  = canvas.toDataURL('image/jpeg', 0.8);
+  const imageB64 = dataUrl.split(',')[1];
+
+  askBtn.disabled = true;
+  askBtn.textContent = 'Arjun is looking…';
+
+  // Close camera panel
+  closeCamera();
+
+  // Show user message in chat with camera icon
+  addMessage('user', `📷 ${question}`);
+
+  // Send to vision API
+  await sendVisionRequest(imageB64, 'image/jpeg', question);
+
+  askBtn.disabled = false;
+  askBtn.innerHTML = '<img src="/static/warrior.svg" alt="" style="width:16px;height:20px;vertical-align:middle;margin-right:6px;"> Ask Arjun';
+}
+
+// ── VISION API REQUEST ────────────────────────────────────────────────────────
+
+async function sendVisionRequest(imageB64, imageType, message) {
+  const typingEl = addTypingIndicator();
+  const sendBtn  = document.getElementById('send-btn');
+  sendBtn.disabled = true;
+
+  try {
+    const res = await fetch('/api/chat-vision', {
+      method : 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken'  : window.CSRF_TOKEN || document.querySelector('meta[name=csrf-token]')?.content || ''
+      },
+      body: JSON.stringify({
+        message   : message,
+        image     : imageB64,
+        image_type: imageType,
+        session_id: currentSessionId,
+        language  : currentLang || 'en'
+      })
+    });
+
+    typingEl.remove();
+
+    if (!res.ok && res.status === 401) {
+      addMessage('arjun', 'Your session has expired. Please log in again 🙏');
+      setTimeout(() => { window.location.href = '/login'; }, 2500);
+      return;
+    }
+
+    const data  = await res.json();
+    const reply = data.reply || 'Something went wrong.';
+    addMessage('arjun', reply);
+    speak(reply);
+
+    if (res.ok) syncLocalHistory(message.startsWith('📷') ? message : `📷 ${message}`, reply);
+  } catch (err) {
+    typingEl.remove();
+    addMessage('arjun', 'The connection was lost. Please check your network.');
+    console.error('Vision request error:', err);
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+// Patch sendMessage to handle image if one is selected
+const _origSendMessage = sendMessage;
+sendMessage = async function() {
+  if (selectedImageB64) {
+    const msg = document.getElementById('user-input').value.trim()
+                || 'What do you see in this image?';
+    addMessage('user', `📷 ${msg}`);
+    document.getElementById('user-input').value = '';
+    autoResize(document.getElementById('user-input'));
+    const b64  = selectedImageB64;
+    const type = selectedImageType;
+    clearImage();
+    await sendVisionRequest(b64, type, msg);
+  } else {
+    _origSendMessage();
+  }
+};

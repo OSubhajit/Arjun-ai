@@ -15,7 +15,8 @@ API_KEY    = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI  = os.getenv("MONGO_URI")
 SECRET_KEY = os.getenv("SECRET_KEY")
 IS_PROD    = os.getenv("RENDER") == "true"
-AI_MODEL   = os.getenv("AI_MODEL", "openai/gpt-3.5-turbo")
+AI_MODEL     = os.getenv("AI_MODEL",     "openai/gpt-3.5-turbo")
+VISION_MODEL = os.getenv("VISION_MODEL", "meta-llama/llama-3.2-11b-vision-instruct:free")
 PORT       = int(os.getenv("PORT", 5000))
 
 # ── AdSense (only set if you have an account — blank disables the tag) ────────
