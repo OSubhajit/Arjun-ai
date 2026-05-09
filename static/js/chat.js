@@ -718,17 +718,22 @@ async function askArjunCamera() {
 // ── VISION API REQUEST ────────────────────────────────────────────────────────
 
 async function sendVisionRequest(imageB64, imageType, message) {
-  const typingEl = addTypingIndicator();
-  const sendBtn  = document.getElementById('send-btn');
+  if (isTyping) return;
+
+  // Guard: set state BEFORE any async ops so errors can clean up properly
+  isTyping = true;
+  const sendBtn    = document.getElementById('send-btn');
+  const statusText = document.getElementById('arjun-status-text');
   sendBtn.disabled = true;
+  if (statusText) statusText.textContent = 'Arjun is looking…';
+
+  // addTyping() is the correct function name (not addTypingIndicator)
+  const typingEl = addTyping();
 
   try {
     const res = await fetch('/api/chat-vision', {
       method : 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken'  : window.CSRF_TOKEN || document.querySelector('meta[name=csrf-token]')?.content || ''
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message   : message,
         image     : imageB64,
@@ -740,7 +745,7 @@ async function sendVisionRequest(imageB64, imageType, message) {
 
     typingEl.remove();
 
-    if (!res.ok && res.status === 401) {
+    if (res.status === 401) {
       addMessage('arjun', 'Your session has expired. Please log in again 🙏');
       setTimeout(() => { window.location.href = '/login'; }, 2500);
       return;
@@ -751,13 +756,16 @@ async function sendVisionRequest(imageB64, imageType, message) {
     addMessage('arjun', reply);
     speak(reply);
 
-    if (res.ok) syncLocalHistory(message.startsWith('📷') ? message : `📷 ${message}`, reply);
+    if (res.ok) syncLocalHistory('📷 ' + message, reply);
+
   } catch (err) {
-    typingEl.remove();
-    addMessage('arjun', 'The connection was lost. Please check your network.');
-    console.error('Vision request error:', err);
+    if (typingEl && typingEl.parentNode) typingEl.remove();
+    addMessage('arjun', 'The connection was lost. Please check your network and try again.');
+    console.error('Vision error:', err);
   } finally {
+    isTyping = false;
     sendBtn.disabled = false;
+    if (statusText) statusText.textContent = 'Awaiting your question';
   }
 }
 
