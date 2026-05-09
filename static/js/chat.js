@@ -330,9 +330,29 @@ function autoResize(el) {
 }
 
 async function sendMessage() {
+  if (isTyping) return;
+
   const input = document.getElementById('user-input');
   const msg   = input.value.trim();
-  if (!msg || isTyping) return;
+
+  // ── Image upload: intercept and send to vision API ──
+  if (selectedImageB64) {
+    if (!msg && !selectedImageB64) return;
+    const userMsg = msg || 'What do you see in this image? Respond as Arjun.';
+    const b64  = selectedImageB64;
+    const type = selectedImageType;
+
+    const intro = document.getElementById('intro-section');
+    if (intro) intro.style.display = 'none';
+
+    addMessage('user', '📷 ' + userMsg);
+    input.value = ''; input.style.height = 'auto';
+    clearImage();
+    await sendVisionRequest(b64, type, userMsg);
+    return;
+  }
+
+  if (!msg) return;
 
   const intro = document.getElementById('intro-section');
   if (intro) intro.style.display = 'none';
@@ -741,20 +761,4 @@ async function sendVisionRequest(imageB64, imageType, message) {
   }
 }
 
-// Patch sendMessage to handle image if one is selected
-const _origSendMessage = sendMessage;
-sendMessage = async function() {
-  if (selectedImageB64) {
-    const msg = document.getElementById('user-input').value.trim()
-                || 'What do you see in this image?';
-    addMessage('user', `📷 ${msg}`);
-    document.getElementById('user-input').value = '';
-    autoResize(document.getElementById('user-input'));
-    const b64  = selectedImageB64;
-    const type = selectedImageType;
-    clearImage();
-    await sendVisionRequest(b64, type, msg);
-  } else {
-    _origSendMessage();
-  }
-};
+// sendMessage handles image natively — see top of function

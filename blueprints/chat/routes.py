@@ -247,27 +247,35 @@ def api_chat_vision():
     reply      = "Server error. Please try again."
     ai_success = False
 
+    # Try primary vision model, fall back to secondary
+    vision_models = [config.VISION_MODEL, "qwen/qwen-2-vl-7b-instruct:free"]
     try:
-        response = http.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {config.API_KEY}",
-                "Content-Type" : "application/json",
-            },
-            json={"model": config.VISION_MODEL, "messages": messages, "temperature": 0.7},
-            timeout=35,
-        )
-        result = response.json()
-        if "choices" in result:
-            reply      = result["choices"][0]["message"]["content"].strip()
-            ai_success = True
-        else:
-            reply = result.get("error", {}).get("message", "AI could not respond at this time.")
-            log.error("Vision API error: %s", reply)
+        for model in vision_models:
+            response = http.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {config.API_KEY}",
+                    "Content-Type" : "application/json",
+                    "HTTP-Referer"  : "https://arjun-ai.onrender.com",
+                    "X-Title"       : "GitaPath — Arjun AI",
+                },
+                json={"model": model, "messages": messages, "temperature": 0.7, "max_tokens": 800},
+                timeout=40,
+            )
+            result = response.json()
+            if "choices" in result:
+                reply      = result["choices"][0]["message"]["content"].strip()
+                ai_success = True
+                break
+            else:
+                err_msg = result.get("error", {}).get("message", "")
+                log.warning("Vision model %s failed: %s", model, err_msg)
+                reply = f"Pardon me, friend. My vision is unclear at this moment — {err_msg or 'please try again shortly'}."
     except http.exceptions.Timeout:
-        reply = "The vision took too long. Please try again."
+        reply = "The vision took too long to process. Please try again."
         log.warning("Vision timeout for user %s", user)
     except Exception as exc:
+        reply = "Something went wrong while I tried to see. Please try again."
         log.error("Vision exception: %s", exc)
 
     if ai_success:
